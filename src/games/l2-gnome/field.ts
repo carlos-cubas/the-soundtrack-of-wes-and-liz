@@ -13,14 +13,33 @@ export const HOLES = 9;
 export const RISE = 0.16;
 export const SINK = 0.22;
 
+/**
+ * How the timing adapts to the input device. A finger lands where the eye
+ * looks; a mouse or trackpad cursor has to travel there first (Fitts's
+ * law: about 0.25 s + 0.15 s·log2(1 + D/W)), so on those the gnomes stay
+ * up longer, come a little less often and can be clicked a touch earlier
+ * and later. The rules stay the deck's: 10 grabs win, 5 escapes lose, and
+ * every grab still speeds things up.
+ */
+export interface Pace {
+  /** Multiplies the time a gnome stays out of the ground. */
+  up: number;
+  /** Multiplies the pause between spawns. */
+  gap: number;
+  /** A gnome is grabbable while more than this fraction of it shows. */
+  floor: number;
+}
+export const TOUCH_PACE: Pace = { up: 1, gap: 1, floor: 0.25 };
+export const MOUSE_PACE: Pace = { up: 1.6, gap: 1.25, floor: 0.12 };
+
 /** Time a gnome is out of the ground (rise + hold), shrinking 8% per grab. */
-export function upTime(grabbed: number): number {
-  return Math.max(0.55, 1.6 * Math.pow(0.92, grabbed));
+export function upTime(grabbed: number, pace: Pace = TOUCH_PACE): number {
+  return Math.max(0.55, 1.6 * Math.pow(0.92, grabbed)) * pace.up;
 }
 
 /** Pause between spawns, shrinking with every grab. */
-export function spawnGap(grabbed: number): number {
-  return Math.max(0.28, 0.8 * Math.pow(0.9, grabbed));
+export function spawnGap(grabbed: number, pace: Pace = TOUCH_PACE): number {
+  return Math.max(0.28, 0.8 * Math.pow(0.9, grabbed)) * pace.gap;
 }
 
 /** Chance that a spawn brings a second gnome along. */
@@ -57,6 +76,8 @@ export class GnomeField {
   escapes = 0;
   over: 'win' | 'lose' | null = null;
   events: FieldEvent[] = [];
+  /** Timing for the current input device; applies from the next gnome on. */
+  pace: Pace = TOUCH_PACE;
   private spawnIn = 0.6;
   private lastHole = -1;
 
@@ -85,7 +106,7 @@ export class GnomeField {
 
   /** A gnome can be grabbed while at least a quarter of it shows. */
   grabbable(i: number): boolean {
-    return this.holes[i].state !== 'empty' && this.rise(i) > 0.25;
+    return this.holes[i].state !== 'empty' && this.rise(i) > this.pace.floor;
   }
 
   update(dt: number): void {
@@ -123,7 +144,7 @@ export class GnomeField {
         h.t = 0;
         this.escapes++;
         this.events.push({ type: 'escape', hole: i });
-        this.spawnIn = Math.max(this.spawnIn, spawnGap(this.grabbed) * 0.5);
+        this.spawnIn = Math.max(this.spawnIn, spawnGap(this.grabbed, this.pace) * 0.5);
         if (this.escapes >= MAX_ESCAPES) {
           this.over = 'lose';
           this.events.push({ type: 'lose', hole: i });
@@ -136,7 +157,7 @@ export class GnomeField {
       if (this.active < maxActive(this.grabbed)) {
         this.spawn();
         if (this.active < maxActive(this.grabbed) && this.rng() < doubleChance(this.grabbed)) this.spawn();
-        this.spawnIn = spawnGap(this.grabbed) * (0.8 + this.rng() * 0.4);
+        this.spawnIn = spawnGap(this.grabbed, this.pace) * (0.8 + this.rng() * 0.4);
       } else {
         this.spawnIn = 0;
       }
@@ -151,7 +172,7 @@ export class GnomeField {
     const h = this.holes[i];
     h.state = 'rising';
     h.t = 0;
-    h.hold = Math.max(0.15, upTime(this.grabbed) - RISE);
+    h.hold = Math.max(0.15, upTime(this.grabbed, this.pace) - RISE);
     h.variant = Math.floor(this.rng() * 3);
     this.lastHole = i;
     this.events.push({ type: 'spawn', hole: i });
@@ -166,7 +187,7 @@ export class GnomeField {
     h.t = 0;
     this.grabbed++;
     this.events.push({ type: 'grab', hole: i, rise });
-    this.spawnIn = Math.max(this.spawnIn, spawnGap(this.grabbed) * 0.5);
+    this.spawnIn = Math.max(this.spawnIn, spawnGap(this.grabbed, this.pace) * 0.5);
     if (this.grabbed >= GOAL) {
       this.over = 'win';
       this.events.push({ type: 'win', hole: i });

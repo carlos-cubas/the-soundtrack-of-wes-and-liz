@@ -6,7 +6,8 @@
  * stuffs it into Libby's little library.
  */
 import type { GameHost, MiniGame, MiniGameFactory } from '../types';
-import { GOAL, GnomeField, HOLES, MAX_ESCAPES, RISE, SINK, upTime, type FieldEvent } from './field';
+import { GOAL, GnomeField, HOLES, MAX_ESCAPES, MOUSE_PACE, RISE, SINK, TOUCH_PACE, upTime, type FieldEvent } from './field';
+import { hitHalfWidth, hitSpan, holeLayout, type HolePos, type PointerKind } from './layout';
 
 const IMG = {
   bg: 'img/bg/l2-yard.webp',
@@ -25,12 +26,6 @@ const LINE = 1.8;
 /** Gnome size at scale 1, virtual units. */
 const GW = 64;
 const GH = 96;
-
-interface HolePos {
-  x: number;
-  y: number;
-  s: number;
-}
 
 interface Particle {
   x: number;
@@ -141,6 +136,10 @@ const factory: MiniGameFactory = () => {
   let libX = 640;
   let libBase = 330;
   let bgCache: HTMLCanvasElement | null = null;
+  let pointer: PointerKind = 'touch';
+  /** Cursor position (virtual units) while a mouse hovers the canvas. */
+  let hover: { x: number; y: number } | null = null;
+  let hovered = -1;
   let unResize: (() => void) | null = null;
   /** Where the open lawn starts in the yard image (fraction of its height). */
   let lawnFrac = 0.5;
@@ -185,23 +184,11 @@ const factory: MiniGameFactory = () => {
       bgRect = { w: img.width * k, h: img.height * k, x: (W - img.width * k) / 2, y: H - img.height * k };
       lawnTop = bgRect.y + bgRect.h * lawnFrac;
     }
-    const y0 = Math.max(206, Math.min(236, lawnTop + 22));
-    const y2 = 357;
     wesX = left + 62;
     wesBase = 392;
     libX = right - 70;
     libBase = 332;
-    const fieldL = left + 150;
-    const fieldR = right - 140;
-    const cx = (fieldL + fieldR) / 2 + 4;
-    const spacing = Math.min(168, (fieldR - fieldL) / 3);
-    const rows = [
-      { y: y0, s: 0.86, k: 0.84 },
-      { y: (y0 + y2) / 2 + 3, s: 0.97, k: 0.92 },
-      { y: y2, s: 1.08, k: 1.0 },
-    ];
-    holes = [];
-    for (const r of rows) for (let c = -1; c <= 1; c++) holes.push({ x: cx + c * spacing * r.k, y: r.y, s: r.s });
+    holes = holeLayout(left, right, Math.max(206, Math.min(236, lawnTop + 22)));
     bgCache = null;
   }
 
@@ -240,14 +227,28 @@ const factory: MiniGameFactory = () => {
   }
 
   /** Tap hitbox of the gnome in hole i: at least 60 wide and 56 tall. */
+  /** Tap/click box of the gnome in hole i (wider for a cursor). */
   function hitRect(i: number): { x: number; y: number; w: number; h: number } {
     const h = holes[i];
-    const p = field.rise(i);
-    const top = Math.min(gnomeBottom(i, p) - GH * h.s, h.y - 50) - 10;
-    const bottom = h.y + 18 * h.s;
-    const hw = Math.max(32, 36 * h.s);
-    return { x: h.x - hw, y: top, w: hw * 2, h: bottom - top };
+    const span = hitSpan(h.y, h.s, gnomeBottom(i, field.rise(i)) - GH * h.s, pointer);
+    const hw = hitHalfWidth(h.s, pointer);
+    return { x: h.x - hw, y: span.top, w: hw * 2, h: span.bottom - span.top };
   }
+
+  /** Mouse/trackpad vs touch: cursor players get more time (see field.ts Pace). */
+  function setPointer(k: PointerKind): void {
+    if (k === pointer) return;
+    pointer = k;
+    field.pace = k === 'mouse' ? MOUSE_PACE : TOUCH_PACE;
+  }
+
+  const onPointer = (e: PointerEvent) => {
+    setPointer(e.pointerType === 'mouse' ? 'mouse' : 'touch');
+    if (e.pointerType === 'mouse') hover = host.stage.toVirtual(e.clientX, e.clientY);
+  };
+  const onLeave = () => {
+    hover = null;
+  };
 
   function pileSlot(k: number): { x: number; y: number; a: number } {
     // a little heap at Wes's feet: 4 + 3 + 2 + 1
@@ -324,18 +325,16 @@ const factory: MiniGameFactory = () => {
     cinVariant = g?.variant ?? 0;
   }
 
-  function tryTap(x: number, y: number): void {
-    // a tap on a gnome's body grabs the front-most one drawn there
+  /** The gnome a tap or click at (x, y) means, or -1. */
+  function pickGnome(x: number, y: number): number {
+    // on a gnome's body: the front-most one drawn there
     for (let i = HOLES - 1; i >= 0; i--) {
       if (!field.grabbable(i)) continue;
       const h = holes[i];
       const bottom = gnomeBottom(i, field.rise(i));
-      if (Math.abs(x - h.x) <= GW * h.s * 0.42 && y >= bottom - GH * h.s && y <= h.y + 6 * h.s) {
-        field.grab(i);
-        return;
-      }
+      if (Math.abs(x - h.x) <= GW * h.s * 0.42 && y >= bottom - GH * h.s && y <= h.y + 6 * h.s) return i;
     }
-    // otherwise the nearest gnome whose generous hitbox contains the tap
+    // otherwise the nearest gnome whose generous hitbox contains the point
     let best = -1;
     let bestD = Infinity;
     for (let i = 0; i < HOLES; i++) {
@@ -348,6 +347,11 @@ const factory: MiniGameFactory = () => {
         best = i;
       }
     }
+    return best;
+  }
+
+  function tryTap(x: number, y: number): void {
+    const best = pickGnome(x, y);
     if (best >= 0) {
       field.grab(best);
       return;
@@ -395,6 +399,11 @@ const factory: MiniGameFactory = () => {
     if (phase === 'play') {
       for (const t of host.input.taps) tryTap(t.x, t.y);
       field.update(dt);
+      const h = pointer === 'mouse' && hover ? pickGnome(hover.x, hover.y) : -1;
+      if (h !== hovered) {
+        hovered = h;
+        host.stage.canvas.style.cursor = h >= 0 ? 'pointer' : '';
+      }
     } else if (phase !== 'intro') {
       field.update(dt); // lets leftover gnomes sink back
     }
@@ -795,6 +804,17 @@ const factory: MiniGameFactory = () => {
       }
     }
     drawHoleFront(ctx, h);
+    if (i === hovered && !held && phase === 'play') {
+      // cursor over this gnome: a lemon ring round the hole says "click me"
+      ctx.strokeStyle = '#ffe80f';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.ellipse(h.x, h.y, 46 * h.s, 17 * h.s, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
     if (taunt[i] >= 0 && taunt[i] < 0.7) {
       const a = 1 - taunt[i] / 0.7;
       ctx.globalAlpha = a;
@@ -1426,12 +1446,23 @@ const factory: MiniGameFactory = () => {
       if (bg) lawnFrac = measureLawn(bg);
       layout();
       unResize = h.stage.onResize(layout);
+      // best first guess before any input: a fine pointer without touch is a mouse/trackpad
+      const fine = typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches && !matchMedia('(any-pointer: coarse)').matches;
+      setPointer(fine ? 'mouse' : 'touch');
+      h.stage.canvas.addEventListener('pointerdown', onPointer);
+      h.stage.canvas.addEventListener('pointermove', onPointer);
+      h.stage.canvas.addEventListener('pointerleave', onLeave);
       refreshHud();
     },
     update,
     render,
     destroy() {
       unResize?.();
+      const c = host.stage.canvas;
+      c.removeEventListener('pointerdown', onPointer);
+      c.removeEventListener('pointermove', onPointer);
+      c.removeEventListener('pointerleave', onLeave);
+      c.style.cursor = '';
       host.hud.setProgress(null);
       host.hud.setLives(null);
       // WebKit holds canvas memory until GC; release it now
@@ -1447,7 +1478,9 @@ const factory: MiniGameFactory = () => {
             phase,
             grabbed: field.grabbed,
             escapes: field.escapes,
-            upTime: upTime(field.grabbed),
+            upTime: upTime(field.grabbed, field.pace),
+            pointer,
+            hovered,
             holes: holes.map((hp, i) => {
               const r = hitRect(i);
               const cx = r.x + r.w / 2;

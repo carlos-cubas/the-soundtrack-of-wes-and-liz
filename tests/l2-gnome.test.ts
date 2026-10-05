@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { GOAL, GnomeField, HOLES, MAX_ESCAPES, RISE, SINK, doubleChance, maxActive, spawnGap, upTime } from '../src/games/l2-gnome/field';
+import {
+  GOAL,
+  GnomeField,
+  HOLES,
+  MAX_ESCAPES,
+  MOUSE_PACE,
+  RISE,
+  SINK,
+  TOUCH_PACE,
+  doubleChance,
+  maxActive,
+  spawnGap,
+  upTime,
+  type Pace,
+} from '../src/games/l2-gnome/field';
+import { hitHalfWidth, holeLayout } from '../src/games/l2-gnome/layout';
 
 /** Deterministic PRNG so the simulations are repeatable. */
 function rng(seed = 7) {
@@ -146,5 +161,134 @@ describe('L2 gnome difficulty curve', () => {
   it('is not a walkover: a very slow player (1.0 s reaction) loses', () => {
     const { f } = play(1.0, 0.4);
     expect(f.over).toBe('lose');
+  });
+});
+
+/**
+ * A mouse/trackpad player: notices a gnome `react` s after it can be
+ * clicked, then moves the cursor there in Fitts's-law time
+ * a + b·log2(1 + D/W) (D = cursor distance, W = hitbox width, same units),
+ * clicks, and moves on to the next gnome it has noticed.
+ */
+function playCursor(p: { react: number; a: number; b: number }, pace: Pace, W: number, seed: number) {
+  const f = new GnomeField(rng(seed));
+  f.pace = pace;
+  const holes = holeLayout(0, W, 222);
+  let cur = { x: W / 2, y: 300 };
+  const noticed = new Map<number, number>();
+  let busy: { i: number; at: number; x: number; y: number } | null = null;
+  let free = 0;
+  let t = 0;
+  const dt = 1 / 120;
+  while (!f.over && t < 120) {
+    f.update(dt);
+    t += dt;
+    f.drain();
+    for (let i = 0; i < HOLES; i++) {
+      if (f.grabbable(i) && !noticed.has(i)) noticed.set(i, t);
+      if (f.holes[i].state === 'empty') noticed.delete(i);
+    }
+    if (!busy && t >= free) {
+      let best = -1;
+      for (const [i, at] of noticed) if (t - at >= p.react && (best < 0 || at < noticed.get(best)!)) best = i;
+      if (best >= 0) {
+        const h = holes[best];
+        const x = h.x;
+        const y = h.y - 40 * h.s;
+        const D = Math.hypot(x - cur.x, y - cur.y);
+        busy = { i: best, at: t + p.a + p.b * Math.log2(1 + D / (2 * hitHalfWidth(h.s, 'mouse'))), x, y };
+      }
+    }
+    if (busy && t >= busy.at) {
+      cur = { x: busy.x, y: busy.y };
+      if (f.grabbable(busy.i)) f.grab(busy.i);
+      noticed.delete(busy.i);
+      busy = null;
+      free = t + 0.08; // re-target
+    }
+  }
+  return f;
+}
+
+const winRate = (p: { react: number; a: number; b: number }, pace: Pace, W: number, n = 40) => {
+  let wins = 0;
+  for (let seed = 1; seed <= n; seed++) if (playCursor(p, pace, W, seed).over === 'win') wins++;
+  return wins / n;
+};
+
+const CASUAL_TRACKPAD = { react: 0.45, a: 0.25, b: 0.15 };
+const SLOW_TRACKPAD = { react: 0.55, a: 0.3, b: 0.2 };
+const VERY_SLOW = { react: 0.8, a: 0.35, b: 0.25 };
+
+describe('L2 timing for mouse and trackpad players', () => {
+  it('leaves touch timing exactly as it was', () => {
+    expect(TOUCH_PACE).toEqual({ up: 1, gap: 1, floor: 0.25 });
+    for (let g = 0; g < 12; g++) {
+      expect(upTime(g, TOUCH_PACE)).toBe(upTime(g));
+      expect(spawnGap(g, TOUCH_PACE)).toBe(spawnGap(g));
+    }
+  });
+
+  it('scales up-time and spawn gaps for a cursor and still speeds up every grab', () => {
+    for (let g = 0; g < 12; g++) {
+      expect(upTime(g, MOUSE_PACE)).toBeCloseTo(upTime(g) * MOUSE_PACE.up, 10);
+      expect(spawnGap(g, MOUSE_PACE)).toBeCloseTo(spawnGap(g) * MOUSE_PACE.gap, 10);
+      if (g > 0) expect(upTime(g, MOUSE_PACE)).toBeLessThan(upTime(g - 1, MOUSE_PACE));
+    }
+    expect(MOUSE_PACE.up).toBeGreaterThan(1);
+    expect(MOUSE_PACE.gap).toBeGreaterThan(1);
+  });
+
+  it('lets a click land earlier as a gnome rises and later as it ducks', () => {
+    const f = new GnomeField(rng());
+    f.pace = MOUSE_PACE;
+    while (f.active === 0) f.update(1 / 60);
+    const i = f.holes.findIndex((h) => h.state !== 'empty');
+    f.holes[i].t = RISE * 0.18;
+    expect(f.grabbable(i)).toBe(true); // a touch player would have to wait
+    f.pace = TOUCH_PACE;
+    expect(f.grabbable(i)).toBe(false);
+  });
+
+  it('keeps the deck rules for cursor players: 10 grabs win, 5 escapes lose', () => {
+    const idle = new GnomeField(rng());
+    idle.pace = MOUSE_PACE;
+    let escapes = 0;
+    for (let t = 0; t < 120 && !idle.over; t += 1 / 60) {
+      idle.update(1 / 60);
+      escapes += idle.drain().filter((e) => e.type === 'escape').length;
+    }
+    expect(idle.over).toBe('lose');
+    expect(escapes).toBe(MAX_ESCAPES);
+    const pro = playCursor({ react: 0.2, a: 0.1, b: 0.05 }, MOUSE_PACE, 711, 3);
+    expect(pro.over).toBe('win');
+    expect(pro.grabbed).toBe(GOAL);
+  });
+
+  it('gives cursors wider hitboxes that never overlap the next hole', () => {
+    for (const W of [711, 780, 866]) {
+      const holes = holeLayout(0, W, 222);
+      for (let row = 0; row < 3; row++) {
+        const a = holes[row * 3];
+        const b = holes[row * 3 + 1];
+        expect(hitHalfWidth(a.s, 'mouse')).toBeGreaterThan(hitHalfWidth(a.s, 'touch'));
+        expect(hitHalfWidth(a.s, 'mouse') + hitHalfWidth(b.s, 'mouse')).toBeLessThan(b.x - a.x);
+      }
+    }
+  });
+
+  it('was too hard on a trackpad with touch timing (the reported bug)', () => {
+    for (const W of [711, 866]) expect(winRate(SLOW_TRACKPAD, TOUCH_PACE, W)).toBeLessThan(0.2);
+  });
+
+  it('lets casual and slower trackpad players win, usually first try', () => {
+    for (const W of [711, 866]) {
+      expect(winRate(CASUAL_TRACKPAD, MOUSE_PACE, W)).toBeGreaterThanOrEqual(0.9);
+      expect(winRate(SLOW_TRACKPAD, MOUSE_PACE, W)).toBeGreaterThanOrEqual(0.8);
+    }
+  });
+
+  it('is still a game: a very slow cursor player wins at most half the time', () => {
+    for (const W of [711, 866]) expect(winRate(VERY_SLOW, MOUSE_PACE, W)).toBeLessThanOrEqual(0.5);
   });
 });
