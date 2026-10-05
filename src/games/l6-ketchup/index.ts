@@ -213,8 +213,6 @@ const factory: MiniGameFactory = () => {
   let targets: Pt[] = [];
   const results: Result[] = [];
   let doneBtn: HTMLButtonElement;
-  /** pointerType of each pointer that went down on the canvas. */
-  const pointerTypes = new Map<number, string>();
   /** Touches that are a hand resting on the iPad while drawing with a Pencil. */
   const palms = new Set<number>();
   let lastPenT = -Infinity;
@@ -271,19 +269,17 @@ const factory: MiniGameFactory = () => {
    */
   function drawingPointer() {
     const free = host.input.freePointers().filter((p) => !palms.has(p.id));
-    return free.find((p) => pointerTypes.get(p.id) === 'pen') ?? free[0] ?? null;
+    return free.find((p) => p.type === 'pen') ?? free[0] ?? null;
   }
 
   /** Palm rejection: touches during (or just after) Pencil use are a hand. */
   const PALM_WINDOW = 2;
   function onPointerDown(e: PointerEvent) {
     const type = e.pointerType || 'mouse';
-    pointerTypes.set(e.pointerId, type);
-    if (pointerTypes.size > 32) pointerTypes.delete(pointerTypes.keys().next().value!);
     if (type === 'pen') {
       lastPenT = realT;
       // a hand already resting on the screen when the Pencil lands
-      for (const p of host.input.freePointers()) if (pointerTypes.get(p.id) === 'touch') palms.add(p.id);
+      for (const p of host.input.freePointers()) if (p.type === 'touch') palms.add(p.id);
       // ketchup it squeezed in that instant never lands
       if (drawId !== null && palms.has(drawId)) pen.cancelFlying();
     } else if (type === 'touch' && realT - lastPenT < PALM_WINDOW) {
@@ -291,7 +287,7 @@ const factory: MiniGameFactory = () => {
     }
   }
   function onPointerUp(e: PointerEvent) {
-    if (pointerTypes.get(e.pointerId) === 'pen') lastPenT = realT;
+    if (e.pointerType === 'pen') lastPenT = realT;
     palms.delete(e.pointerId);
   }
 
@@ -605,7 +601,7 @@ const factory: MiniGameFactory = () => {
     // a different finger or the Pencil took over: start a fresh squeeze there
     if (p && drawId !== null && p.id !== drawId) pen.lift();
     drawId = p ? p.id : null;
-    if (p) pointerType = pointerTypes.get(p.id) ?? 'mouse';
+    if (p) pointerType = p.type;
     const off = p && pointerType === 'touch' ? touchOff() : 0;
     const fx = p ? Math.max(-LAYER / 2 + 6, Math.min(LAYER / 2 - 6, p.x - ncx)) : pen.aimX;
     const fy = p ? Math.max(-LAYER / 2 + 6, Math.min(LAYER / 2 - 6, p.y - off - ncy)) : pen.aimY;
