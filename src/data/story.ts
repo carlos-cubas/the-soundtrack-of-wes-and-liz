@@ -56,6 +56,8 @@ export interface LevelDef {
   narration: string[];
   /** How-to-play bullet points shown before the game starts. */
   howTo: string[];
+  /** Keyboard controls, listed on the how-to page on devices with a keyboard. */
+  keys?: Array<{ keys: string[]; does: string }>;
   /** Which levels must be complete before this one unlocks. */
   requires: LevelId[];
   /** Song always earned on completion. */
@@ -174,6 +176,11 @@ export const LEVELS: Record<LevelId, LevelDef> = {
       'Barbie throws beach balls down at you. Jump over them or dodge them.',
       'Use the ladders to climb. Reach Barbie on the roof for a kiss!',
     ],
+    keys: [
+      { keys: ['←', '→'], does: 'walk' },
+      { keys: ['↑', '↓'], does: 'climb a ladder' },
+      { keys: ['Space'], does: 'jump' },
+    ],
     requires: [],
     song: 'psa',
     scene: 'img/scenes/l1.webp',
@@ -237,6 +244,7 @@ export const LEVELS: Record<LevelId, LevelDef> = {
       'Squeeze past the crowds. Bumping into people slows you down.',
       "Wes is deathly afraid of clowns. There's one in the garage. Good luck.",
     ],
+    keys: [{ keys: ['←', '↑', '↓', '→'], does: 'walk (WASD works too)' }],
     requires: ['l2'],
     song: 'monkeywrench',
     item: 'bat',
@@ -309,6 +317,7 @@ export const LEVELS: Record<LevelId, LevelDef> = {
       'Drag your finger to move. Dodge every ball for 10 rounds.',
       'Each round the balls get faster. Make it through without a hit to earn a prize.',
     ],
+    keys: [{ keys: ['←', '↑', '↓', '→'], does: 'move Liz (WASD works too)' }],
     requires: ['l2'],
     song: 'electric',
     item: 'cap',
@@ -383,6 +392,7 @@ export const LEVELS: Record<LevelId, LevelDef> = {
       'Every tile you hit builds one more piece of your confession rap.',
       'Collect enough points to finish the confession. Libby is listening…',
     ],
+    keys: [{ keys: ['D', 'F', 'J', 'K'], does: 'the four lanes, left to right. Hold the key for long tiles.' }],
     requires: ['l3', 'l4', 'l5', 'l6'],
     song: 'paradise',
     scene: 'img/scenes/boss.webp',
@@ -473,6 +483,10 @@ export const LEVELS: Record<LevelId, LevelDef> = {
       "Dash across the yards to Liz's car before the seats get soaked.",
       'Lightning strikes where the ground glows. Fallen branches block the way.',
       'Reach the car and hold the button to roll up the window.',
+    ],
+    keys: [
+      { keys: ['←', '→'], does: 'run' },
+      { keys: ['Space'], does: 'jump, then hold it at the car to roll up the window' },
     ],
     requires: ['l3'],
     song: 'badliar',

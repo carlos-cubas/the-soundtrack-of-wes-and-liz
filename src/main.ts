@@ -26,8 +26,10 @@ installFastClick();
 
 // iPads can run the game in a resizable window, where turning the device doesn't help.
 const iPad = /iPad/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+const desktop = !iPad && matchMedia('(pointer: fine)').matches && !matchMedia('(any-pointer: coarse)').matches;
 const hintText = document.querySelector('#rotate-hint p');
-if (iPad && hintText) hintText.textContent = 'Turn your iPad sideways or make the window wider to play';
+if (hintText && iPad) hintText.textContent = 'Turn your iPad sideways or make the window wider to play';
+else if (hintText && desktop) hintText.textContent = 'Make the window wider to play';
 
 const params = new URLSearchParams(location.search);
 const direct = params.get('play') as LevelId | null;

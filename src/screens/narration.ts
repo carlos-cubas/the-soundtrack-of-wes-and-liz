@@ -5,6 +5,7 @@
  */
 import { app } from '../core/app';
 import { audio } from '../core/audio';
+import { likelyKeyboard } from '../core/input';
 import { save } from '../core/save';
 import { ITEMS, type LevelDef } from '../data/story';
 import { art, closeX, flower, newspaper, portrait, tape } from '../ui/decor';
@@ -177,6 +178,14 @@ export function showNarration(level: LevelDef, opts: { howTo?: boolean } = {}): 
               { class: 'howto-main' },
               el('h2', { class: 'brush-title howto-title' }, 'How to play'),
               el('ol', { class: 'howto-list' }, ...level.howTo.map((h, n) => el('li', {}, el('span', { class: 'howto-n' }, String(n + 1)), el('span', {}, h)))),
+              level.keys && likelyKeyboard()
+                ? el(
+                    'div',
+                    { class: 'howto-keys', 'data-testid': 'howto-keys' },
+                    el('b', {}, 'On a keyboard'),
+                    ...level.keys.map((k) => el('div', { class: 'howto-key' }, ...k.keys.map((t) => el('kbd', {}, t)), el('span', {}, k.does))),
+                  )
+                : null,
               extras,
               el(
                 'div',

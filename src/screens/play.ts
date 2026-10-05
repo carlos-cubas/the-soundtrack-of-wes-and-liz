@@ -87,11 +87,15 @@ export function runGame(level: LevelDef): Promise<PlayOutcome> {
       if (!p) {
         closeMenu?.();
         closeMenu = null;
+        menuOpen = false;
         last = performance.now();
       }
     }
 
+    /** True while the pause menu itself (not a screen opened from it) is showing. */
+    let menuOpen = false;
     function openPauseMenu() {
+      menuOpen = true;
       const body = el(
         'div',
         {},
@@ -103,10 +107,12 @@ export function runGame(level: LevelDef): Promise<PlayOutcome> {
           button('Resume', () => setPaused(false), { color: 'green', icon: '▶', id: 'resume' }),
           button('Narration', () => {
             closeMenu?.();
+            menuOpen = false;
             replayNarration(root, level).then(() => openPauseMenu());
           }, { color: 'orange', icon: '🔊' }),
           button('Inventory', () => {
             closeMenu?.();
+            menuOpen = false;
             openInventory(root).then(() => {
               refreshItem();
               openPauseMenu();
@@ -127,6 +133,15 @@ export function runGame(level: LevelDef): Promise<PlayOutcome> {
       if (document.hidden) setPaused(true);
     };
     document.addEventListener('visibilitychange', onVis);
+    // desktop: clicking away from the window pauses, and Esc or P toggles the pause menu
+    const onWinBlur = () => setPaused(true);
+    window.addEventListener('blur', onWinBlur);
+    const onPauseKey = (e: KeyboardEvent) => {
+      if (e.repeat || !ready || (e.code !== 'Escape' && e.code !== 'KeyP')) return;
+      if (!paused) setPaused(true);
+      else if (menuOpen) setPaused(false);
+    };
+    window.addEventListener('keydown', onPauseKey);
     // Same query as the CSS rotate hint: while it covers the game, pause it.
     const portrait = window.matchMedia('(max-aspect-ratio: 5/4)');
     const onOrient = () => {
@@ -167,6 +182,8 @@ export function runGame(level: LevelDef): Promise<PlayOutcome> {
       cancelAnimationFrame(raf);
       closeMenu?.();
       document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('blur', onWinBlur);
+      window.removeEventListener('keydown', onPauseKey);
       portrait.removeEventListener('change', onOrient);
       try {
         game?.destroy();

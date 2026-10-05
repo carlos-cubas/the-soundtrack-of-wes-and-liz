@@ -406,3 +406,10 @@ button {
 .icon-btn .ico-svg { width: 24px; height: 24px; }
 .hud-chip .ico-svg { width: 20px; height: 20px; }
 [data-testid='hud-lives'] { gap: 2px; }
+
+/* ---------- Keyboard hints (how-to page on keyboard devices) ---------- */
+.howto-keys { margin-top: 8px; padding: 8px 14px; background: var(--paper); color: var(--ink); border-radius: 8px; box-shadow: 0 4px 10px rgba(10, 30, 60, 0.2); display: flex; flex-direction: column; gap: 5px; font-size: 17px; }
+.howto-keys > b { font-weight: normal; font-family: var(--font-title); color: var(--sky-ink, #2f5fd0); font-size: 16px; }
+.howto-key { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.howto-key > span { margin-left: 4px; }
+kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 26px; padding: 0 6px; font: inherit; font-size: 17px; line-height: 1; color: var(--ink); background: var(--paper); border: 1.5px solid var(--ink); border-radius: 5px; box-shadow: 0 2.5px 0 var(--ink); }

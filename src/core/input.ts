@@ -18,6 +18,8 @@ export interface Pointer {
   startY: number;
   startT: number;
   down: boolean;
+  /** 'touch', 'mouse' or 'pen', from the PointerEvent. */
+  type: string;
   /** Which control (if any) captured this pointer. */
   owner: string | null;
 }
@@ -62,6 +64,45 @@ const KEYMAP: Record<string, string[]> = {
   down: ['ArrowDown', 'KeyS'],
 };
 
+/** A mouse or trackpad is the main pointer, so a keyboard is most likely there too. */
+export function likelyKeyboard(): boolean {
+  return typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches;
+}
+
+/** How a key code reads on a keycap: 'KeyZ' → 'Z', 'ArrowUp' → '↑'. */
+export function keyLabel(code: string): string {
+  const arrows: Record<string, string> = { ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→' };
+  if (arrows[code]) return arrows[code];
+  if (code.startsWith('Key')) return code.slice(3);
+  if (code.startsWith('Digit')) return code.slice(5);
+  return code;
+}
+
+/** A small line-art keycap in the cover style: cream face, ink outline and base; lemon while pressed. */
+function drawKeycap(ctx: CanvasRenderingContext2D, cx: number, cy: number, text: string, pressed: boolean): void {
+  ctx.font = "12px 'Patrick Hand', sans-serif";
+  const w = Math.max(18, ctx.measureText(text).width + 10);
+  const h = 16;
+  const x = cx - w / 2;
+  const drop = pressed ? 2 : 0;
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#2b2b3a';
+  ctx.beginPath();
+  ctx.roundRect(x, cy - h / 2 + 2.5, w, h, 4);
+  ctx.fill();
+  ctx.fillStyle = pressed ? '#f8de4f' : '#fdfbf3';
+  ctx.strokeStyle = '#2b2b3a';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.roundRect(x, cy - h / 2 + drop, w, h, 4);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#2b2b3a';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, cx, cy + drop + 0.5);
+}
+
 export class Input {
   readonly pointers = new Map<number, Pointer>();
   /** Pointer-down positions this frame (not captured by a control). */
@@ -76,6 +117,12 @@ export class Input {
   private stickState = new Map<string, { cx: number; cy: number; dx: number; dy: number; pid: number }>();
   private dpadState = new Map<string, { x: number; y: number }>();
   enabled = true;
+  /** A key was pressed on this device: show keycaps even without a fine pointer (iPad + keyboard). */
+  private sawKey = false;
+  /** When a movement key was last used, to retire the stick's keyboard caption. */
+  private movedByKey = false;
+  private readonly bornAt = performance.now();
+  private hoverCursor = false;
 
   private offResize: () => void;
 
@@ -84,6 +131,8 @@ export class Input {
     // deferred so games can re-lay out their controls in their own resize handler first
     this.offResize = stage.onResize(() => queueMicrotask(() => this.refresh()));
     c.addEventListener('pointerdown', this.onDown, { passive: false });
+    c.addEventListener('lostpointercapture', this.onUp);
+    c.addEventListener('contextmenu', this.onContextMenu);
     window.addEventListener('pointermove', this.onMove, { passive: false });
     window.addEventListener('pointerup', this.onUp);
     window.addEventListener('pointercancel', this.onUp);
@@ -109,6 +158,9 @@ export class Input {
     this.offResize();
     const c = this.stage.canvas;
     c.removeEventListener('pointerdown', this.onDown);
+    c.removeEventListener('lostpointercapture', this.onUp);
+    c.removeEventListener('contextmenu', this.onContextMenu);
+    if (this.hoverCursor) c.style.cursor = '';
     window.removeEventListener('pointermove', this.onMove);
     window.removeEventListener('pointerup', this.onUp);
     window.removeEventListener('pointercancel', this.onUp);
@@ -120,6 +172,8 @@ export class Input {
   // ---------------------------------------------------------------- pointers
   private onDown = (e: PointerEvent) => {
     if (!this.enabled) return;
+    // right and middle clicks are not taps (and the context menu would swallow their pointerup)
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     e.preventDefault();
     try {
       this.stage.canvas.setPointerCapture(e.pointerId);
@@ -137,6 +191,7 @@ export class Input {
       startY: v.y,
       startT: performance.now(),
       down: true,
+      type: e.pointerType || 'touch',
       owner: null,
     };
     p.owner = this.hitControl(p);
@@ -147,7 +202,10 @@ export class Input {
 
   private onMove = (e: PointerEvent) => {
     const p = this.pointers.get(e.pointerId);
-    if (!p) return;
+    if (!p) {
+      if (e.pointerType === 'mouse') this.updateHover(e);
+      return;
+    }
     e.preventDefault();
     const v = this.stage.toVirtual(e.clientX, e.clientY);
     p.x = v.x;
@@ -170,6 +228,8 @@ export class Input {
   };
 
   private onKeyDown = (e: KeyboardEvent) => {
+    this.sawKey = true;
+    if (Object.values(KEYMAP).some((codes) => codes.includes(e.code))) this.movedByKey = true;
     if (!this.keys.has(e.code)) this.keysPressed.add(e.code);
     this.keys.add(e.code);
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
@@ -177,6 +237,26 @@ export class Input {
   private onKeyUp = (e: KeyboardEvent) => {
     this.keys.delete(e.code);
   };
+  private onContextMenu = (e: Event) => e.preventDefault();
+
+  /** Pointer cursor over an on-screen control, for mouse users. */
+  private updateHover(e: PointerEvent): void {
+    const c = this.stage.canvas;
+    const v = this.stage.toVirtual(e.clientX, e.clientY);
+    const over =
+      e.target === c &&
+      this.controls.some((d) => d.kind !== 'stick' && Math.hypot(v.x - d.x, v.y - d.y) <= d.r * (d.kind === 'button' ? 1.25 : 1.3));
+    if (over !== this.hoverCursor) {
+      this.hoverCursor = over;
+      c.style.cursor = over ? 'pointer' : '';
+    }
+  }
+
+  /** Show keyboard keycaps on the controls: devices with a mouse or trackpad, or once a key was pressed. */
+  get keyboardHints(): boolean {
+    return this.sawKey || likelyKeyboard();
+  }
+
   private onBlur = () => {
     this.keys.clear();
     this.pointers.clear();
@@ -351,6 +431,7 @@ export class Input {
 
   /** Draw the on-screen controls (call at the end of render). */
   renderControls(ctx: CanvasRenderingContext2D): void {
+    const hints = this.keyboardHints;
     ctx.save();
     for (const c of this.controls) {
       if (c.kind === 'button') {
@@ -378,6 +459,9 @@ export class Input {
           ctx.textBaseline = 'middle';
           ctx.fillText(c.label, c.x, c.y + (down ? 2 : 0) + 1);
         }
+        if (hints && c.keys?.length) {
+          drawKeycap(ctx, c.x, c.y - c.r - 4, keyLabel(c.keys[0]), c.keys.some((k) => this.keys.has(k)));
+        }
       } else if (c.kind === 'dpad') {
         const st = this.dpadState.get(c.id);
         ctx.globalAlpha = 0.55;
@@ -388,7 +472,9 @@ export class Input {
         ctx.globalAlpha = 0.9;
         const arrows: Array<[number, number]> = c.axes === 'lr' ? [[-1, 0], [1, 0]] : [[-1, 0], [1, 0], [0, -1], [0, 1]];
         for (const [ax, ay] of arrows) {
-          const active = st && ((ax !== 0 && st.x === ax) || (ay !== 0 && st.y === ay));
+          const dir = ax < 0 ? 'left' : ax > 0 ? 'right' : ay < 0 ? 'up' : 'down';
+          const active =
+            (st && ((ax !== 0 && st.x === ax) || (ay !== 0 && st.y === ay))) || KEYMAP[dir].some((k) => this.keys.has(k));
           ctx.fillStyle = active ? '#f7768e' : '#2b2b3a';
           ctx.save();
           ctx.translate(c.x + ax * c.r * 0.58, c.y + ay * c.r * 0.58);
@@ -402,9 +488,34 @@ export class Input {
           ctx.fill();
           ctx.restore();
         }
+        if (hints) {
+          const caps = c.axes === 'lr' ? ['left', 'right'] : ['left', 'up', 'down', 'right'];
+          const gap = 22;
+          caps.forEach((dir, i) => {
+            const x = c.x + (i - (caps.length - 1) / 2) * gap;
+            drawKeycap(ctx, x, c.y - c.r - 4, keyLabel(KEYMAP[dir][0]), KEYMAP[dir].some((k) => this.keys.has(k)));
+          });
+        }
       } else {
         const st = this.stickState.get(c.id);
-        if (!st) continue;
+        if (!st) {
+          // keyboard caption until the player moves with the keys (or ~12 s pass)
+          if (hints && !this.movedByKey && performance.now() - this.bornAt < 12000) {
+            const z = c.zone;
+            const y = z.y + z.h - 24;
+            const x0 = z.x + 34;
+            ['left', 'up', 'down', 'right'].forEach((dir, i) => drawKeycap(ctx, x0 + i * 22, y, keyLabel(KEYMAP[dir][0]), false));
+            ctx.font = "13px 'Patrick Hand', sans-serif";
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = 'rgba(253,251,243,0.9)';
+            ctx.fillStyle = '#2b2b3a';
+            ctx.strokeText('or WASD to move', x0 + 4 * 22 - 4, y + 1);
+            ctx.fillText('or WASD to move', x0 + 4 * 22 - 4, y + 1);
+          }
+          continue;
+        }
         ctx.globalAlpha = 0.35;
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
