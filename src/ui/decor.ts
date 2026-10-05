@@ -5,6 +5,7 @@
  * the hand-drawn "Liz and Wes Playlist" CD.
  */
 import { audio } from '../core/audio';
+import { portraitPath } from '../data/portraits';
 import { SONGS, SPEAKER_NAMES, type SongId } from '../data/story';
 import { asset, el } from './dom';
 import { icon } from './icons';
@@ -206,7 +207,7 @@ export function initialBadge(who: string): HTMLElement {
 
 /** Character portrait: mood variant → base portrait → initial badge. */
 export function portrait(who: string, mood: string | undefined, cls: string): HTMLElement {
-  const paths = [mood ? `img/portraits/${who}-${mood}.webp` : null, `img/portraits/${who}.webp`].filter(Boolean) as string[];
+  const paths = [...new Set([portraitPath(who, mood), portraitPath(who)])];
   const p = art(paths, `portrait ${cls}`, () => initialBadge(who), { fit: 'contain' });
   p.dataset.who = who;
   return p;

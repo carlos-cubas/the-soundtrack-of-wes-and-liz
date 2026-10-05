@@ -11,9 +11,7 @@ import { el } from '../ui/dom';
 import { icon } from '../ui/icons';
 import { typewriter, type Typewriter } from '../ui/typewriter';
 
-export function portraitPath(who: string, mood?: string): string {
-  return `img/portraits/${who}${mood ? '-' + mood : ''}.webp`;
-}
+export { portraitPath } from '../data/portraits';
 
 const LEFT = new Set(['wes', 'wes-kid']);
 
