@@ -20,8 +20,10 @@ import {
   atCar,
   bfs,
   isSolid,
+  MOUSE_DEAD,
   moveCircle,
   roomAt,
+  steerToward,
 } from '../src/games/l3-maze/map';
 
 const secondsFor = (tiles: number) => (tiles * TILE) / BASE_SPEED;
@@ -161,6 +163,46 @@ describe('L3 party maze', () => {
       const panicCost = PANIC_STUN + 30 / BASE_SPEED;
       expect(TIME_LIMIT - secondsFor(viaGarage.length - 1) - panicCost).toBeGreaterThanOrEqual(5);
       expect(COURAGE).toBeGreaterThan(1); // enough nerve to get past before panicking again
+    });
+  });
+
+  describe('mouse steering (walk toward the cursor)', () => {
+    it('heads straight for the cursor at full speed beyond the dead zone', () => {
+      const d = steerToward(100, 100, 160, 180);
+      expect(Math.hypot(d.x, d.y)).toBeCloseTo(1, 10);
+      expect(d.x).toBeCloseTo(0.6, 10);
+      expect(d.y).toBeCloseTo(0.8, 10);
+      const near = steerToward(100, 100, 100 + MOUSE_DEAD + 0.5, 100);
+      expect(near).toEqual({ x: 1, y: 0 }); // no ramp: still full speed just outside
+    });
+
+    it('stops cleanly inside the ~14 unit dead zone', () => {
+      expect(MOUSE_DEAD).toBeGreaterThanOrEqual(12);
+      expect(MOUSE_DEAD).toBeLessThanOrEqual(16);
+      expect(steerToward(100, 100, 100, 100)).toEqual({ x: 0, y: 0 });
+      expect(steerToward(100, 100, 100 + MOUSE_DEAD * 0.7, 100 - MOUSE_DEAD * 0.7)).toEqual({ x: 0, y: 0 });
+    });
+
+    it('gets Wes to the car by holding the cursor a few tiles ahead on the route, in time', () => {
+      // a simple mouse player: re-aims every 0.2 s at the tile 2 ahead on the shortest route
+      const p = { x: (START.x + 0.5) * TILE, y: (START.y + 0.5) * TILE };
+      let aim = { x: p.x, y: p.y };
+      let t = 0;
+      let next = 0;
+      const dt = 1 / 60;
+      while (!atCar(p.x, p.y, 9) && t < TIME_LIMIT) {
+        if (t >= next) {
+          const path = bfs({ x: Math.floor(p.x / TILE), y: Math.floor(p.y / TILE) })!;
+          const k = path[Math.min(2, path.length - 1)];
+          aim = path.length > 1 ? { x: (k.x + 0.5) * TILE, y: (k.y + 0.5) * TILE } : { x: CAR_RECT.x + CAR_RECT.w / 2, y: CAR_RECT.y + CAR_RECT.h / 2 };
+          next = t + 0.2;
+        }
+        const d = steerToward(p.x, p.y, aim.x, aim.y);
+        moveCircle(p, d.x * BASE_SPEED * dt, d.y * BASE_SPEED * dt, 9);
+        t += dt;
+      }
+      expect(atCar(p.x, p.y, 9)).toBe(true);
+      expect(TIME_LIMIT - t).toBeGreaterThanOrEqual(4); // people aside, plenty of slack
     });
   });
 });

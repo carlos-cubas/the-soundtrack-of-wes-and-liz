@@ -212,6 +212,21 @@ export function bfs(
 /** Scratch list for resolve(), reused so collision doesn't allocate per frame. */
 const near: Array<{ tx: number; ty: number; d: number }> = [];
 
+/** Mouse steering: Wes stops this close (world units) to the cursor or clicked spot. */
+export const MOUSE_DEAD = 14;
+
+/**
+ * Mouse steering: full-speed unit direction from (x, y) toward (tx, ty),
+ * or zero inside the dead zone so Wes stops cleanly on the spot.
+ */
+export function steerToward(x: number, y: number, tx: number, ty: number, dead = MOUSE_DEAD): { x: number; y: number } {
+  const dx = tx - x;
+  const dy = ty - y;
+  const d = Math.hypot(dx, dy);
+  if (d <= dead) return { x: 0, y: 0 };
+  return { x: dx / d, y: dy / d };
+}
+
 /** Push a circle out of every solid tile it overlaps. */
 function resolve(p: { x: number; y: number }, r: number): boolean {
   let hit = false;

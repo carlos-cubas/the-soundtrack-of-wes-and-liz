@@ -33,6 +33,7 @@ import {
   isSolid,
   moveCircle,
   roomAt,
+  steerToward,
   type RoomId,
 } from './map';
 
@@ -114,6 +115,17 @@ const factory: MiniGameFactory = () => {
   let host: GameHost;
   let view = { s: 1, ox: 0, oy: HUD_TOP };
   let stickR = 44;
+  /**
+   * Touch steers with the floating stick. A mouse or trackpad walks Wes
+   * toward the cursor while the button is held, or to the last clicked spot
+   * (straight line, sliding along walls). Arrow keys/WASD work in both.
+   */
+  let scheme: 'touch' | 'mouse' = 'touch';
+  let walkTo: { x: number; y: number } | null = null;
+  /** After a click: tile-centre waypoints to walkTo through rooms already explored. */
+  let walkPath: Array<{ x: number; y: number }> = [];
+  let pressing = false;
+  let stuckT = 0;
   let cache: HTMLCanvasElement | null = null;
   let cacheK = 0;
   let unResize: (() => void) | null = null;
@@ -243,18 +255,105 @@ const factory: MiniGameFactory = () => {
     const availH = H - HUD_TOP;
     const s = Math.min(availW / WORLD_W, availH / WORLD_H);
     view = { s, ox: left + (availW - WORLD_W * s) / 2, oy: HUD_TOP + (availH - WORLD_H * s) / 2 };
+    applyControls();
+    cache = null;
+  }
+
+  /** The floating stick for touch; no on-screen control for a mouse. */
+  function applyControls(): void {
+    const { W, H } = host.stage;
     // re-making the stick drops its state, so leave it alone while a finger
     // is on it (e.g. Safari's toolbar resizing the page mid-run)
-    let held = false;
-    for (const p of host.input.pointers.values()) if (p.owner === 'move') held = true;
-    if (!held) {
+    for (const p of host.input.pointers.values()) if (p.owner === 'move') return;
+    host.input.clearControls();
+    if (scheme === 'touch') {
       // 44 units on phones; on iPads (bigger CSS px per unit) keep the thumb
       // travel for full speed about a centimetre instead of growing with the frame
       stickR = 44 * Math.min(1, 1.25 / host.stage.scale);
-      host.input.clearControls();
       host.input.addStick({ id: 'move', zone: { x: 0, y: HUD_TOP, w: W * 0.55, h: H - HUD_TOP }, r: stickR });
     }
-    cache = null;
+    host.stage.canvas.style.cursor = scheme === 'mouse' ? 'crosshair' : '';
+  }
+
+  function setScheme(k: 'touch' | 'mouse'): void {
+    if (k === scheme) return;
+    scheme = k;
+    walkTo = null;
+    applyControls();
+  }
+
+  // capture phase: runs before Input sees the press, so a mouse click is
+  // never grabbed by the touch stick (and a finger always finds it)
+  const onDownCapture = (e: PointerEvent) => setScheme(e.pointerType === 'mouse' ? 'mouse' : 'touch');
+
+  function toWorldPt(vx: number, vy: number): { x: number; y: number } {
+    return { x: (vx - view.ox) / view.s, y: (vy - view.oy) / view.s };
+  }
+
+  /** Has Wes seen this tile (its room, or a room next to a wall/doorway, revealed)? */
+  function known(tx: number, ty: number): boolean {
+    for (const r of tileRooms[ty]?.[tx] ?? []) if (revealed.has(r)) return true;
+    return false;
+  }
+
+  /**
+   * A click (button released): walk the tile route to the spot, but only
+   * through rooms already explored, so the fog still hides the way out.
+   * Anything else is a straight walk toward the spot, sliding along walls.
+   */
+  function planWalk(): void {
+    walkPath = [];
+    if (!walkTo) return;
+    const to = { x: Math.floor(walkTo.x / TILE), y: Math.floor(walkTo.y / TILE) };
+    if (isSolid(to.x, to.y) || !known(to.x, to.y)) return;
+    const unknown = new Set<string>();
+    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) if (!known(x, y)) unknown.add(`${x},${y}`);
+    const path = bfs({ x: Math.floor(wes.x / TILE), y: Math.floor(wes.y / TILE) }, [to], unknown);
+    if (!path || path.length < 3) return;
+    walkPath = path.slice(1, -1).map((t) => ({ x: (t.x + 0.5) * TILE, y: (t.y + 0.5) * TILE }));
+  }
+
+  /** Mouse input this frame: a held button follows the cursor, a click sets a spot. */
+  function readMouse(): void {
+    const p = host.input.primary();
+    const tap = host.input.taps[host.input.taps.length - 1];
+    if (p) {
+      // holding: straight at the cursor
+      walkTo = toWorldPt(p.x, p.y);
+      walkPath = [];
+      pressing = true;
+    } else if (tap) {
+      // a quick click that went down and up between two frames
+      walkTo = toWorldPt(tap.x, tap.y);
+      pressing = false;
+      planWalk();
+    } else if (pressing) {
+      pressing = false;
+      planWalk();
+    }
+  }
+
+  /** Mouse steering: a unit direction toward the cursor / clicked spot, or zero. */
+  function mouseAxis(keys: { x: number; y: number }): { x: number; y: number } {
+    const p = host.input.primary();
+    if (Math.hypot(keys.x, keys.y) > 0.15) {
+      walkTo = null; // the keys take over
+      walkPath = [];
+      return keys;
+    }
+    if (!walkTo) return keys;
+    while (walkPath.length && Math.hypot(walkPath[0].x - wes.x, walkPath[0].y - wes.y) < 9) walkPath.shift();
+    const next = walkPath[0] ?? walkTo;
+    const dir = steerToward(wes.x, wes.y, next.x, next.y, walkPath.length ? 0 : undefined);
+    if ((dir.x === 0 && dir.y === 0) || (!p && stuckT > 0.45)) {
+      // arrived (or a clicked spot behind a wall): stop cleanly
+      if (!p) {
+        walkTo = null;
+        walkPath = [];
+      }
+      return { x: 0, y: 0 };
+    }
+    return dir;
   }
 
   // ------------------------------------------------------------------ update
@@ -268,7 +367,10 @@ const factory: MiniGameFactory = () => {
       wesBubbleT -= dt;
       if (wesBubbleT <= 0) wesBubble = null;
     }
-    const a = host.input.axis();
+    const keys = host.input.axis();
+    const live = phase === 'ready' || phase === 'run';
+    if (scheme === 'mouse' && live) readMouse();
+    const a = scheme === 'mouse' && live && stun <= 0 ? mouseAxis(keys) : keys;
     const moving = Math.hypot(a.x, a.y) > 0.15;
 
     if (phase === 'ready') {
@@ -311,7 +413,12 @@ const factory: MiniGameFactory = () => {
         wes.vx += (ax * sp - wes.vx) * blend;
         wes.vy += (ay * sp - wes.vy) * blend;
         if (Math.hypot(wes.vx, wes.vy) > 8) wes.face = Math.atan2(wes.vy, wes.vx);
+        const x0 = wes.x;
+        const y0 = wes.y;
         moveCircle(wes, wes.vx * dt, wes.vy * dt, WES_R);
+        // walking at a wall toward a clicked spot? (see mouseAxis)
+        const progress = dt > 0 ? Math.hypot(wes.x - x0, wes.y - y0) / dt : 0;
+        stuckT = walkTo && moving && progress < 15 ? stuckT + dt : 0;
       }
       revealAround();
       panicNearClown();
@@ -537,6 +644,7 @@ const factory: MiniGameFactory = () => {
       else drawWes(ctx);
     }
     drawFog(ctx);
+    if (scheme === 'mouse' && walkTo && (phase === 'ready' || phase === 'run')) drawWalkTarget(ctx, walkTo.x, walkTo.y);
     for (const p of people) if (p.bubble && fogVisible(p.room)) bubble(ctx, p.bubble, p.x, p.y - PERSON_R - 4, p.line === 'PARTY!' ? '#ffe80f' : '#ffffff');
     if (wesBubble) bubble(ctx, wesBubble, wes.x, wes.y - WES_R - 6, '#f9b6c8');
     drawParts(ctx);
@@ -1105,6 +1213,23 @@ const factory: MiniGameFactory = () => {
     }
   }
 
+  /** Where a mouse player is sending Wes: a small lemon ring. */
+  function drawWalkTarget(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+    const r = 6 + Math.sin(clock * 8) * 1.2;
+    ctx.lineWidth = 3.5;
+    ctx.strokeStyle = INK;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#ffe80f';
+    ctx.stroke();
+    ctx.fillStyle = '#ffe80f';
+    ctx.beginPath();
+    ctx.arc(x, y, 1.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   function drawCarMarker(ctx: CanvasRenderingContext2D): void {
     if (phase === 'win') return;
     const cx = CAR_RECT.x + CAR_RECT.w / 2;
@@ -1487,8 +1612,12 @@ const factory: MiniGameFactory = () => {
         /* draw with fallback fonts */
       }
       makePeople();
+      // best first guess before any input: a fine pointer without touch is a mouse/trackpad
+      const fine = typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches && !matchMedia('(any-pointer: coarse)').matches;
+      scheme = fine ? 'mouse' : 'touch';
       layout();
       unResize = h.stage.onResize(layout);
+      h.stage.canvas.addEventListener('pointerdown', onDownCapture, true);
       h.hud.setTimer(TIME_LIMIT, 5);
       hudText = el('span', {}, 'In your car');
       hudChip = el(
@@ -1503,6 +1632,8 @@ const factory: MiniGameFactory = () => {
     render,
     destroy() {
       unResize?.();
+      host.stage.canvas.removeEventListener('pointerdown', onDownCapture, true);
+      host.stage.canvas.style.cursor = '';
       hudChip?.remove();
       host.hud.setTimer(null);
       // WebKit holds canvas memory until GC; release it now
@@ -1537,6 +1668,12 @@ const factory: MiniGameFactory = () => {
             clientY: rect.top + (view.oy + wes.y * view.s) * sc,
             tile_px: TILE,
             stickR,
+            scheme,
+            walkTo,
+            walkSteps: walkPath.length,
+            view,
+            sc,
+            rect: { left: rect.left, top: rect.top },
             speed: BASE_SPEED * host.speed,
             car: { x: CAR_RECT.x + CAR_RECT.w / 2, y: CAR_RECT.y + CAR_RECT.h / 2 },
           };
