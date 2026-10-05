@@ -229,6 +229,10 @@ export class Input {
 
   private onKeyDown = (e: KeyboardEvent) => {
     this.sawKey = true;
+    // A focused menu or game button (pause menu, L4's wardrobe) handles its own Space/Enter/arrows.
+    // The HUD's own buttons are the exception: while playing, Space should jump, not re-press pause.
+    const ui = (e.target as Element | null)?.closest?.('button, a[href], input, select, textarea, [role="button"]');
+    if (ui && !ui.closest('.hud, .item-use')) return;
     if (Object.values(KEYMAP).some((codes) => codes.includes(e.code))) this.movedByKey = true;
     if (!this.keys.has(e.code)) this.keysPressed.add(e.code);
     this.keys.add(e.code);
