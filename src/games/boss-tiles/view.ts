@@ -65,10 +65,16 @@ export const laneCenter = (L: Layout, lane: number) => L.x0 + (lane + 0.5) * L.l
 export const LANE_KEYS = ['KeyD', 'KeyF', 'KeyJ', 'KeyK'];
 export const laneForKey = (code: string) => LANE_KEYS.indexOf(code);
 
-/** Where a lane's keycap sits: centred in the lane, in the strip under the hit band. */
+/** Keycap face size and the depth of its base (the face drops by this when pressed). */
+export const KEYCAP_DEPTH = 3;
+
+/**
+ * Where a lane's keycap sits: centred in the lane, right under the hit band,
+ * big enough to read while tiles fall (the base adds KEYCAP_DEPTH below).
+ */
 export function keycapRect(L: Layout, lane: number): { x: number; y: number; w: number; h: number } {
-  const w = Math.min(30, Math.round(L.laneW * 0.36));
-  return { x: laneCenter(L, lane) - w / 2, y: HIT_Y + TILE_H / 2 + 6, w, h: 22 };
+  const w = Math.min(40, Math.round(L.laneW * 0.42));
+  return { x: laneCenter(L, lane) - w / 2, y: HIT_Y + TILE_H / 2 + 3, w, h: 27 };
 }
 
 /**

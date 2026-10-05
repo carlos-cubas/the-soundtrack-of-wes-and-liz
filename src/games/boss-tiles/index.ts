@@ -31,6 +31,7 @@ import {
   card as drawCard,
   inked,
   buildTileSprite,
+  KEYCAP_DEPTH,
   keycapRect,
   laneForKey,
   LANE_KEYS,
@@ -59,6 +60,33 @@ const MINT = '#9be3c9';
 /** Karaoke card: height of the header row above the current line. */
 const CARD_TOP = 32;
 const TAGLINE = 'palms are sweaty';
+/** Intro-card diagram: lanes, hit line, a tile with its key (D) pressed, a hold tile, keycaps D F J K. */
+const KEYS_DIAGRAM = (() => {
+  const ink = '#3a3340';
+  const lane = (i: number) => `<rect x="${10 + i * 52}" y="2" width="52" height="78" fill="#fdfbf3" stroke="${ink}" stroke-width="1.5"/>`;
+  const cap = (i: number, k: string, down: boolean) => {
+    const x = 10 + i * 52 + 10;
+    const dy = down ? 3 : 0;
+    return (
+      `<rect x="${x}" y="${90}" width="32" height="24" rx="6" fill="${ink}"/>` +
+      `<rect x="${x}" y="${87 + dy}" width="32" height="24" rx="6" fill="${down ? '#f0c419' : '#fff'}" stroke="${ink}" stroke-width="2"/>` +
+      `<text x="${x + 16}" y="${104 + dy}" text-anchor="middle" font-family="Patrick Hand, sans-serif" font-size="17" fill="#2b2b3a">${k}</text>`
+    );
+  };
+  return (
+    `<svg viewBox="0 0 228 118" width="228" height="118" role="img" aria-label="Keys D F J K play the four lanes, left to right" style="display:block;margin:0 auto">` +
+    [0, 1, 2, 3].map(lane).join('') +
+    `<rect x="10" y="2" width="52" height="78" fill="#f8de4f" opacity="0.35"/>` +
+    `<rect x="6" y="61" width="216" height="4" fill="#f7768e" stroke="${ink}" stroke-width="1"/>` +
+    `<rect x="14" y="54" width="44" height="18" rx="4" fill="#24212e" stroke="#121018" stroke-width="1.5"/>` +
+    `<rect x="118" y="10" width="44" height="62" rx="4" fill="#3b3570" stroke="#121018" stroke-width="1.5"/>` +
+    `<rect x="138.5" y="16" width="3" height="36" fill="#fdfbf3" opacity="0.6"/>` +
+    `<rect x="118" y="54" width="44" height="18" rx="4" fill="#24212e" stroke="#121018" stroke-width="1.5"/>` +
+    `<text x="140" y="44" text-anchor="middle" font-family="Patrick Hand, sans-serif" font-size="12" fill="#fdfbf3">hold</text>` +
+    ['D', 'F', 'J', 'K'].map((k, i) => cap(i, k, i === 0)).join('') +
+    `</svg>`
+  );
+})();
 /** The heart path from ui/icons.ts ('heart'), used here as a fillable meter. */
 const HEART_PATH = 'M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.3 4.3 4.3 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z';
 
@@ -119,6 +147,8 @@ export default (level: LevelDef): MiniGame => {
   let pop: { text: string; color: string; t: number } | null = null;
   const laneGlow = [0, 0, 0, 0];
   const laneBad = [0, 0, 0, 0];
+  /** A lane key was just pressed: the whole lane flashes, linking key and lane. */
+  const keyFlash = [0, 0, 0, 0];
   const pointerLane = new Map<number, number>();
   let hitCount = 0;
   let lastHitAt = -1;
@@ -484,6 +514,7 @@ export default (level: LevelDef): MiniGame => {
     }
     // an OS that forgets to flag a repeat must not tap the lane again
     if (pointerLane.has(-1 - lane)) return;
+    keyFlash[lane] = 1;
     down(lane, -1 - lane, stamp(e), laneCenter(L, lane), HIT_Y);
   };
   const onKeyUp = (e: KeyboardEvent) => {
@@ -549,27 +580,24 @@ export default (level: LevelDef): MiniGame => {
     host.dom.appendChild(card);
   }
 
-  /** "On a keyboard, press D F J K…" with line-art keycaps, for the intro card. */
+  /**
+   * For keyboards, on the intro card: a little line-art diagram of the four
+   * lanes with their keycaps (a tile on the line with its key pressed, a hold
+   * tile), plus a line of text.
+   */
   function keysHint(): HTMLElement {
-    const cap = (k: string) =>
+    const wrap = el('div', { 'data-testid': 'boss-keys-hint', style: 'margin:8px 0 2px' });
+    wrap.innerHTML = KEYS_DIAGRAM;
+    wrap.append(
       el(
-        'kbd',
-        {
-          style:
-            'display:inline-block;min-width:1.5em;margin:0 1px;padding:0 4px;border:1.5px solid var(--ink);border-bottom-width:3px;' +
-            'border-radius:6px;background:var(--paper);font:inherit;line-height:1.25;text-align:center',
-        },
-        k,
-      );
-    return el(
-      'p',
-      { 'data-testid': 'boss-keys-hint', style: 'font-size:17px' },
-      'On a keyboard, press ',
-      ...LANE_KEYS.map((k) => cap(k.slice(3))),
-      ' for the four lanes. Hold the key for long tiles. ',
-      cap('Space'),
-      ' starts.',
+        'p',
+        { style: 'font-size:17px;margin:4px 0 0' },
+        'On a keyboard, press the key under a lane as its tile reaches the line. ',
+        el('b', {}, 'Hold for long tiles.'),
+        ' Space starts.',
+      ),
     );
+    return wrap;
   }
 
   // ------------------------------------------------------------- drawing
@@ -650,6 +678,16 @@ export default (level: LevelDef): MiniGame => {
         ctx.fillRect(L.x0 + i * L.laneW + 1, HIT_Y - 150, L.laneW - 2, 150 + TILE_H / 2);
         ctx.globalAlpha = 1;
       }
+      if (keyboard) {
+        // a pressed key lights its whole lane; a held one keeps a faint tint
+        const a = Math.max(keyFlash[i] * 0.3, pointerLane.has(-1 - i) ? 0.1 : 0);
+        if (a > 0.01) {
+          ctx.globalAlpha = a;
+          ctx.fillStyle = LEMON;
+          ctx.fillRect(L.x0 + i * L.laneW + 1, 0, L.laneW - 2, HIT_Y + TILE_H / 2);
+          ctx.globalAlpha = 1;
+        }
+      }
       if (laneBad[i] > 0.01) {
         ctx.globalAlpha = laneBad[i] * 0.35;
         ctx.fillStyle = CORAL;
@@ -659,22 +697,22 @@ export default (level: LevelDef): MiniGame => {
     }
   }
 
-  /** Line-art keycaps under the hit line; a held key presses down and turns lemon. */
+  /**
+   * Line-art keycaps under the hit line: a white face on an ink base, like a
+   * real key. A held key's face drops onto its base and fills deep lemon.
+   */
   function drawKeycaps(ctx: CanvasRenderingContext2D): void {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = "15px 'Patrick Hand'";
+    ctx.font = "20px 'Patrick Hand'";
     for (let lane = 0; lane < 4; lane++) {
       const r = keycapRect(L, lane);
       const held = pointerLane.has(-1 - lane);
-      const dy = held ? 2 : 0;
-      if (!held) {
-        roundRect(ctx, r.x, r.y + 2.5, r.w, r.h, 6);
-        ctx.fillStyle = 'rgba(58,51,64,0.45)';
-        ctx.fill();
-      }
-      roundRect(ctx, r.x, r.y + dy, r.w, r.h, 6);
-      inked(ctx, held ? LEMON : CREAM, 1.5);
+      const dy = held ? KEYCAP_DEPTH : 0;
+      roundRect(ctx, r.x, r.y + KEYCAP_DEPTH, r.w, r.h, 7);
+      inked(ctx, INK, 2);
+      roundRect(ctx, r.x, r.y + dy, r.w, r.h, 7);
+      inked(ctx, held ? '#f0c419' : '#ffffff', 2);
       ctx.fillStyle = INK_TEXT;
       ctx.fillText(LANE_KEYS[lane].slice(3), r.x + r.w / 2, r.y + dy + r.h / 2 + 1);
     }
@@ -1097,6 +1135,7 @@ export default (level: LevelDef): MiniGame => {
       for (let i = 0; i < 4; i++) {
         laneGlow[i] *= k;
         laneBad[i] *= k;
+        keyFlash[i] *= Math.exp(-dt * 5);
       }
       updateHud();
     },
