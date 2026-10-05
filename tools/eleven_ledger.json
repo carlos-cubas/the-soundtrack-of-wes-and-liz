@@ -1,0 +1,352 @@
+{
+  "reward": {
+    "seconds": 40,
+    "bytes": 640776,
+    "cost": null,
+    "model": "music_v2_5",
+    "format": "mp3_44100_128",
+    "prompt": "Opens with a short bright two-bar celebratory fanfare, then settles into a soft, happy, steady groove that keeps repeating: sparkling glockenspiel, plucky pizzicato strings, warm bass, light claps. The feel-good moment of unlocking a new song on a playlist. 120 BPM, major key. Instrumental only, no vocals. Steady tempo and groove the whole way through, loop-friendly, no fade-out, no big ending.",
+    "songId": "afuoJhdldeNEySDsy9JP",
+    "at": "2026-10-04 18:10",
+    "note": "take 2 (40 s, fanfare-then-groove prompt); take 1 (32 s) had no clean loop"
+  },
+  "l1": {
+    "seconds": 72,
+    "bytes": 1152776,
+    "cost": null,
+    "model": "music_v2_5",
+    "format": "mp3_44100_128",
+    "prompt": "Playful kid-cartoon bounce with an 8-bit chiptune flavor. Bouncy square-wave lead, bubbly synth bass, toy piano, xylophone and springy percussion. A cheeky frog hopping up the floors of a pink toy dreamhouse, retro platform game level music. 140 BPM, major key, energetic. Instrumental only, no vocals. Steady tempo and groove the whole way through, loop-friendly, no fade-out, no big ending.",
+    "at": "2026-10-04 18:05"
+  },
+  "title": {
+    "seconds": 90,
+    "bytes": 1440750,
+    "cost": null,
+    "model": "music_v2_5",
+    "format": "mp3_44100_128",
+    "prompt": "Warm, hopeful indie-pop romantic-comedy main theme. Bright jangly clean electric guitar, soft piano chords, glockenspiel melody, warm bass, light brushed drums and handclaps. A sunny small-town love story about two next-door neighbors: sweet, a little nostalgic, optimistic. 112 BPM, major key. Instrumental only, no vocals. Steady tempo and groove the whole way through, loop-friendly, no fade-out, no big ending.",
+    "at": "2026-10-04 18:06"
+  },
+  "map": {
+    "seconds": 90,
+    "bytes": 1440750,
+    "cost": null,
+    "model": "music_v2_5",
+    "format": "mp3_44100_128",
+    "prompt": "Laid-back strolling suburban afternoon. Light fingerpicked acoustic guitar, ukulele strums, a playful whistled melody, upright bass, soft shaker and finger snaps. Relaxed and friendly, walking around the neighborhood on a sunny day. 96 BPM, major key. Instrumental only, no vocals. Steady tempo and groove the whole way through, loop-friendly, no fade-out, no big ending.",
+    "at": "2026-10-04 18:06"
+  },
+  "narration": {
+    "seconds": 75,
+    "bytes": 1200841,
+    "cost": null,
+    "model": "music_v2_5",
+    "format": "mp3_44100_128",
+    "prompt": "Soft storybook underscore. Gentle felt piano melody with light warm strings and a touch of celesta, tender and calm, like turning the pages of a picture book about two childhood neighbors. 72 BPM, major key, even quiet dynamics. Instrumental only, no vocals. Steady tempo and groove the whole way through, loop-friendly, no fade-out, no big ending.",
+    "at": "2026-10-04 18:06"
+  },
+  "l2": {
+    "seconds": 72,
+    "bytes": 1152776,
+    "cost": null,
+    "model": "music_v2_5",
+    "format": "mp3_44100_128",
+    "prompt": "Quirky mischievous garden caper. Sneaky pizzicato strings, marimba, bassoon, tiptoeing upright bass, woodblock and tambourine. Two kids up to no good in the backyard knocking over garden gnomes, cartoon heist energy. 128 BPM, minor key with playful turns. Instrumental only, no vocals. Steady tempo and groove the whole way through, loop-friendly, no fade-out, no big ending.",
+    "at": "2026-10-04 18:06"
+  },
+  "l3": {
+    "seconds": 56,
+    "bytes": 896567,
+    "cost": null,
+    "model": "music_v2_5",
+    "format": "mp3_44100_128",
+    "prompt": "Driving, tense indie-rock escape. Urgent overdriven guitars, pounding drums, fast eighth-note bass, ticking hi-hats. Racing through a crowded high-school house party to get to the car in fifteen seconds. 160 BPM, minor key, relentless constant energy, no breakdown. Instrumental only, no vocals. Steady tempo and groove the whole way through, loop-friendly, no fade-out, no big ending.",
+    "at": "2026-10-04 18:06"
+  },
+  "l4": {
+    "seconds": 76,
+    "bytes": 1216724,
+    "cost": null,
+    "model": "music_v2_5",
+    "format": "mp3_44100_128",
+    "prompt": "Upbeat mall pop fashion-runway track. Glossy synth-pop chords, four-on-the-floor kick, funky slap bass, finger snaps, sparkly arpeggios. Catwalk strut confidence, a shopping-mall dress-up montage. 118 BPM, major key. Instrumental only, no vocals. Steady tempo and groove the whole way through, loop-friendly, no fade-out, no big ending.",
+    "at": "2026-10-04 18:07"
+  },
+  "l5": {
+    "seconds": 72,
+    "bytes": 1152776,
+    "cost": null,
+    "model": "music_v2_5",
+    "format": "mp3_44100_128",
+    "prompt": "Hype high-school gym sports anthem. Stomping drums in a stomp-stomp-clap rhythm, big handclaps, punchy brass stabs, chunky bass, marching snare. Pumped-up dodgeball game in a school gym. 126 BPM, major key. Instrumental only, no vocals. Steady tempo and groove the whole way through, loop-friendly, no fade-out, no big ending.",
+    "songId": "p1ViLTAe0e71Tyww6hVn",
+    "at": "2026-10-04 18:10",
+    "note": "take 1 kept; a second take with a repeat-oriented prompt looped worse and was discarded"
+  },
+  "l6": {
+    "seconds": 76,
+    "bytes": 1216724,
+    "cost": null,
+    "model": "music_v2_5",
+    "format": "mp3_44100_128",
+    "prompt": "Retro 1950s diner jukebox instrumental in a doo-wop style. Walking upright bass, twangy clean electric guitar, piano triplets, warm tenor saxophone melody, brushed shuffle drums, finger snaps. Sweet, cozy milkshake-and-fries diner. Slow 12/8 shuffle, about 80 BPM, major key. Instrumental only, no vocals. Steady tempo and groove the whole way through, loop-friendly, no fade-out, no big ending.",
+    "at": "2026-10-04 18:07"
+  },
+  "sq1": {
+    "seconds": 80,
+    "bytes": 1280671,
+    "cost": null,
+    "model": "music_v2_5",
+    "format": "mp3_44100_128",
+    "prompt": "Cozy acoustic date-night music. Warm fingerpicked acoustic guitar, soft Rhodes electric piano, gentle upright bass, brushed drums, a small tender melody. Sitting in a car at night with someone you like. 84 BPM, major key, intimate. Instrumental only, no vocals. Steady tempo and groove the whole way through, loop-friendly, no fade-out, no big ending.",
+    "at": "2026-10-04 18:07"
+  },
+  "sq2": {
+    "seconds": 80,
+    "bytes": 1280671,
+    "cost": null,
+    "model": "music_v2_5",
+    "format": "mp3_44100_128",
+    "prompt": "Tender, bittersweet piano piece about memories and family. Solo felt piano with soft cello and warm strings, slow and heartfelt, a little sad but hopeful, looking through old photos of a mother who is gone. 68 BPM, even dynamics. Instrumental only, no vocals. Steady tempo and groove the whole way through, loop-friendly, no fade-out, no big ending.",
+    "at": "2026-10-04 18:07"
+  },
+  "sq3": {
+    "seconds": 62,
+    "bytes": 992698,
+    "cost": null,
+    "model": "music_v2_5",
+    "format": "mp3_44100_128",
+    "prompt": "Urgent stormy cinematic percussion. Thundering taiko and toms, driving low string ostinato, tense staccato violins, rumbling bass, the feel of heavy rain and wind. Racing through a storm to close a car window. 140 BPM, minor key, constant urgency. Instrumental only, no vocals. Steady tempo and groove the whole way through, loop-friendly, no fade-out, no big ending.",
+    "songId": "e44i8F2gsgndP5MMSyvk",
+    "at": "2026-10-04 18:11",
+    "note": "take 1 kept; a second take with a repeat-oriented prompt looped worse and was discarded"
+  },
+  "ending": {
+    "seconds": 90,
+    "bytes": 1440750,
+    "cost": null,
+    "model": "music_v2_5",
+    "format": "mp3_44100_128",
+    "prompt": "Sweet, euphoric romantic finale. Soaring indie-pop with shimmering electric guitars, big warm piano chords, swelling strings, glockenspiel, joyful drums and handclaps. Happily ever after under the stars. 116 BPM, major key, uplifting. Instrumental only, no vocals. Steady tempo and groove the whole way through, loop-friendly, no fade-out, no big ending.",
+    "at": "2026-10-04 18:08"
+  },
+  "_extra_takes": {
+    "seconds": 166,
+    "note": "discarded takes, still billed"
+  },
+  "sfx:jump": {
+    "seconds": 0.6,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "6",
+    "prompt": "cartoon spring boing for a small frog jumping, one short bouncy boing",
+    "loop": false
+  },
+  "sfx:land": {
+    "seconds": 0.5,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "5",
+    "prompt": "soft little cartoon landing thump on a wooden floor, one short thud",
+    "loop": false
+  },
+  "sfx:hit": {
+    "seconds": 0.6,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "6",
+    "prompt": "cartoon bonk impact with a comic squeaky toy honk, getting hit, one short hit",
+    "loop": false
+  },
+  "sfx:bonk": {
+    "seconds": 0.6,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "6",
+    "prompt": "rubber basketball bouncing hard off someone's head, cartoon bonk, one hit",
+    "loop": false
+  },
+  "sfx:collect": {
+    "seconds": 0.6,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "6",
+    "prompt": "bright magical sparkle pickup chime, short video game collect sound",
+    "loop": false
+  },
+  "sfx:grab": {
+    "seconds": 0.5,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "5",
+    "prompt": "quick fabric rustle of grabbing a shirt off a clothes hanger, short",
+    "loop": false
+  },
+  "sfx:pop": {
+    "seconds": 0.5,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "5",
+    "prompt": "cartoon pop of a garden gnome's head popping off, like a cork, one short pop",
+    "loop": false
+  },
+  "sfx:star": {
+    "seconds": 0.8,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "8",
+    "prompt": "single bright twinkling star ding, glockenspiel with sparkle, short",
+    "loop": false
+  },
+  "sfx:win": {
+    "seconds": 2.5,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "25",
+    "prompt": "short triumphant cheerful victory jingle, bright brass and glockenspiel, level complete",
+    "loop": false
+  },
+  "sfx:lose": {
+    "seconds": 2.2,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "22",
+    "prompt": "short comedic sad trombone wah wah wah fail jingle, game over",
+    "loop": false
+  },
+  "sfx:unlock": {
+    "seconds": 1.2,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "12",
+    "prompt": "magical unlock shimmer, quick rising harp glissando ending on a bell ding",
+    "loop": false
+  },
+  "sfx:claim": {
+    "seconds": 1.2,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "12",
+    "prompt": "reward claimed chime, bright bell chord with a sparkle, satisfying and short",
+    "loop": false
+  },
+  "sfx:whoosh": {
+    "seconds": 0.6,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "6",
+    "prompt": "fast air whoosh swipe, short",
+    "loop": false
+  },
+  "sfx:swish": {
+    "seconds": 0.5,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "5",
+    "prompt": "quick light swish of a ball flying past, short",
+    "loop": false
+  },
+  "sfx:squirt": {
+    "seconds": 0.6,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "6",
+    "prompt": "squeezing a plastic ketchup bottle, short wet squirt",
+    "loop": false
+  },
+  "sfx:splat": {
+    "seconds": 0.6,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "6",
+    "prompt": "wet ketchup splat onto a plate, short",
+    "loop": false
+  },
+  "sfx:splash": {
+    "seconds": 0.8,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "8",
+    "prompt": "foot stomping into a rain puddle, water splash, short",
+    "loop": false
+  },
+  "sfx:thunder": {
+    "seconds": 3.5,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "35",
+    "prompt": "loud close thunder crack followed by a deep rolling rumble",
+    "loop": false
+  },
+  "sfx:kiss": {
+    "seconds": 0.6,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "6",
+    "prompt": "cute cartoon kiss smooch, one short mwah",
+    "loop": false
+  },
+  "sfx:scream": {
+    "seconds": 1.0,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "10",
+    "prompt": "cartoon little kid shouting eww in disgust, short",
+    "loop": false
+  },
+  "sfx:page": {
+    "seconds": 0.6,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "6",
+    "prompt": "single paper page turn of a storybook, short",
+    "loop": false
+  },
+  "sfx:whoa": {
+    "seconds": 1.4,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "14",
+    "prompt": "small crowd of teenagers going whoa in amazement, short",
+    "loop": false
+  },
+  "sfx:cheer": {
+    "seconds": 2.2,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "22",
+    "prompt": "small crowd of teenagers cheering and clapping, short",
+    "loop": false
+  },
+  "sfx:ribbit": {
+    "seconds": 0.6,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "6",
+    "prompt": "cute cartoon frog ribbit croak, one short croak",
+    "loop": false
+  },
+  "sfx:camera": {
+    "seconds": 0.5,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "5",
+    "prompt": "camera shutter click with a flash pop, fashion photo, short",
+    "loop": false
+  },
+  "sfx:rain": {
+    "seconds": 12.0,
+    "model": "eleven_text_to_sound_v3",
+    "format": "pcm_44100",
+    "cost": "120",
+    "prompt": "steady heavy rain falling on a car roof and pavement, constant, no thunder",
+    "loop": true
+  },
+  "_sfx_replaced": {
+    "model": "eleven_text_to_sound_v2",
+    "generations": 27,
+    "credits": 378,
+    "note": "first pass (26 effects + a probe) on eleven_text_to_sound_v2, replaced by eleven_text_to_sound_v3; plus 2 v3 probe generations (36 credits)"
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "bonk": {
+    "src": "audio/sfx/bonk.m4a",
+    "gain": 0.989,
+    "vary": 0.05
+  },
+  "camera": {
+    "src": "audio/sfx/camera.m4a",
+    "gain": 0.647,
+    "vary": 0.03
+  },
+  "cheer": {
+    "src": "audio/sfx/cheer.m4a",
+    "gain": 0.318
+  },
+  "claim": {
+    "src": "audio/sfx/claim.m4a",
+    "gain": 0.401
+  },
+  "collect": {
+    "src": "audio/sfx/collect.m4a",
+    "gain": 0.832,
+    "vary": 0.03
+  },
+  "grab": {
+    "src": "audio/sfx/grab.m4a",
+    "gain": 0.981,
+    "vary": 0.06
+  },
+  "hit": {
+    "src": "audio/sfx/hit.m4a",
+    "gain": 1.439,
+    "vary": 0.04
+  },
+  "jump": {
+    "src": "audio/sfx/jump.m4a",
+    "gain": 0.57,
+    "vary": 0.06
+  },
+  "kiss": {
+    "src": "audio/sfx/kiss.m4a",
+    "gain": 0.511,
+    "vary": 0.04
+  },
+  "land": {
+    "src": "audio/sfx/land.m4a",
+    "gain": 0.841,
+    "vary": 0.08
+  },
+  "lose": {
+    "src": "audio/sfx/lose.m4a",
+    "gain": 0.502
+  },
+  "page": {
+    "src": "audio/sfx/page.m4a",
+    "gain": 0.565,
+    "vary": 0.05
+  },
+  "pop": {
+    "src": "audio/sfx/pop.m4a",
+    "gain": 1.613,
+    "vary": 0.07
+  },
+  "rain": {
+    "src": "audio/sfx/rain.m4a",
+    "gain": 0.219,
+    "loop": true
+  },
+  "ribbit": {
+    "src": "audio/sfx/ribbit.m4a",
+    "gain": 0.373,
+    "vary": 0.06
+  },
+  "scream": {
+    "src": "audio/sfx/scream.m4a",
+    "gain": 0.33
+  },
+  "splash": {
+    "src": "audio/sfx/splash.m4a",
+    "gain": 1.05,
+    "vary": 0.05
+  },
+  "splat": {
+    "src": "audio/sfx/splat.m4a",
+    "gain": 1.078,
+    "vary": 0.06
+  },
+  "squirt": {
+    "src": "audio/sfx/squirt.m4a",
+    "gain": 0.851,
+    "vary": 0.06
+  },
+  "star": {
+    "src": "audio/sfx/star.m4a",
+    "gain": 0.309
+  },
+  "swish": {
+    "src": "audio/sfx/swish.m4a",
+    "gain": 1.457,
+    "vary": 0.08
+  },
+  "thunder": {
+    "src": "audio/sfx/thunder.m4a",
+    "gain": 0.741
+  },
+  "unlock": {
+    "src": "audio/sfx/unlock.m4a",
+    "gain": 0.324
+  },
+  "whoa": {
+    "src": "audio/sfx/whoa.m4a",
+    "gain": 0.298
+  },
+  "whoosh": {
+    "src": "audio/sfx/whoosh.m4a",
+    "gain": 0.667,
+    "vary": 0.06
+  },
+  "win": {
+    "src": "audio/sfx/win.m4a",
+    "gain": 0.459
+  }
+}

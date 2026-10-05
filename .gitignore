@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+.env.*
+*.local
+.DS_Store
+.playwright-mcp/
+test-results/
+playwright-report/
+.omc/
+ios/App/App/public/
+ios/App/build/
+ios/DerivedData/
+art-src/raw/
+__pycache__/
+art-src/ref/

@@ -1,0 +1,48 @@
+/* Shared by the side quests (sq1, sq2): small face crops and the boombox chip. */
+
+.sq-face {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--cover);
+}
+.sq-face.square { border-radius: 2px; }
+/* portraits are waist-up (head ~20% down): zoom to the head */
+.sq-face img { position: absolute; left: 50%; top: -8%; width: 210%; height: auto; max-width: none; transform: translateX(-50%); }
+/* full-body sprite stand-in: zoom further */
+.sq-face img.is-sprite { top: -30%; width: 230%; }
+/* drawn fallback face is already a head-and-shoulders */
+.sq-face img.is-drawn { inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; transform: none; }
+
+.sq-boombox { background: #dbeafe; color: var(--cobalt); }
+.sq-item { width: 26px; height: 26px; object-fit: contain; flex: 0 0 auto; }
+.hud-chip .sq-item { width: 30px; height: 30px; margin-left: -6px; }
+
+.sq-float .sq-item { width: 28px; height: 28px; margin: -4px 0 -4px -6px; }
+.sq-float .ico-svg { width: 20px; height: 20px; }
+.sq-float {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: var(--cobalt);
+  color: #fff;
+  font-size: 18px;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  animation: sq-float 1.5s ease-out both;
+}
+@keyframes sq-float {
+  0% { opacity: 0; transform: translate(-50%, 10px) scale(0.8); }
+  15% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  75% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -26px); }
+}

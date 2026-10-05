@@ -1,0 +1,118 @@
+{
+  "title": {
+    "src": "audio/music/title.mp3",
+    "loopStart": 33.041995,
+    "loopEnd": 84.470385,
+    "xfade": 0.3,
+    "rho": 0.622,
+    "gain": 0.612
+  },
+  "map": {
+    "src": "audio/music/map.mp3",
+    "loopStart": 26.656508,
+    "loopEnd": 81.649637,
+    "xfade": 0.12,
+    "rho": 0.654,
+    "gain": 0.514
+  },
+  "narration": {
+    "src": "audio/music/narration.mp3",
+    "loopStart": 32.182857,
+    "loopEnd": 67.177234,
+    "xfade": 0.12,
+    "rho": 0.657,
+    "gain": 0.594
+  },
+  "reward": {
+    "src": "audio/music/reward.mp3",
+    "start": 1.95,
+    "loopStart": 9.032562,
+    "loopEnd": 33.025714,
+    "xfade": 0.3,
+    "rho": 0.36,
+    "gain": 0.546
+  },
+  "l1": {
+    "src": "audio/music/l1.mp3",
+    "loopStart": 13.165714,
+    "loopEnd": 54.312857,
+    "xfade": 0.12,
+    "rho": 0.394,
+    "gain": 0.524
+  },
+  "l2": {
+    "src": "audio/music/l2.mp3",
+    "loopStart": 29.187483,
+    "loopEnd": 59.18771,
+    "xfade": 0.12,
+    "rho": 0.531,
+    "gain": 0.6
+  },
+  "l3": {
+    "src": "audio/music/l3.mp3",
+    "loopStart": 26.795828,
+    "loopEnd": 50.79102,
+    "xfade": 0.3,
+    "rho": 0.375,
+    "gain": 0.478
+  },
+  "l4": {
+    "src": "audio/music/l4.mp3",
+    "start": 1.95,
+    "loopStart": 32.252517,
+    "loopEnd": 72.922313,
+    "xfade": 0.3,
+    "rho": 0.341,
+    "gain": 0.522
+  },
+  "l5": {
+    "src": "audio/music/l5.mp3",
+    "loopStart": 26.331429,
+    "loopEnd": 56.806213,
+    "xfade": 0.3,
+    "rho": 0.193,
+    "gain": 0.566
+  },
+  "l6": {
+    "src": "audio/music/l6.mp3",
+    "start": 0.2,
+    "loopStart": 7.012426,
+    "loopEnd": 55.030748,
+    "xfade": 0.12,
+    "rho": 0.698,
+    "gain": 0.485
+  },
+  "sq1": {
+    "src": "audio/music/sq1.mp3",
+    "start": 0.3,
+    "loopStart": 22.616236,
+    "loopEnd": 56.91839,
+    "xfade": 0.12,
+    "rho": 0.679,
+    "gain": 0.686
+  },
+  "sq2": {
+    "src": "audio/music/sq2.mp3",
+    "loopStart": 38.963084,
+    "loopEnd": 74.274308,
+    "xfade": 0.12,
+    "rho": 0.729,
+    "gain": 0.608
+  },
+  "sq3": {
+    "src": "audio/music/sq3.mp3",
+    "loopStart": 30.998639,
+    "loopEnd": 58.444626,
+    "xfade": 0.3,
+    "rho": 0.229,
+    "gain": 0.575
+  },
+  "ending": {
+    "src": "audio/music/ending.mp3",
+    "loopStart": 16.044989,
+    "loopEnd": 65.685782,
+    "xfade": 0.3,
+    "rho": 0.45,
+    "gain": 0.544
+  }
+}
