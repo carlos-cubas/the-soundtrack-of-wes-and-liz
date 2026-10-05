@@ -419,6 +419,22 @@
   100% { opacity: 0; transform: translate(var(--dx), 120px) rotate(var(--rot)) scale(0.8); }
 }
 
+/* ---------- desktop: pointer, keyboard focus, hover (touch screens unchanged) ---------- */
+.l4 button { cursor: pointer; }
+.l4 button:focus-visible { outline: 3px solid var(--cobalt); outline-offset: 2px; }
+.l4 .l4-sw:focus-visible { outline-offset: -3px; border-radius: 50%; }
+@media (hover: hover) {
+  .l4-tab:hover:not(.on) { background: #f8eebd; color: var(--ink); }
+  .l4-tile { transition: transform 0.1s ease, translate 0.12s ease, box-shadow 0.12s ease; }
+  .l4-tile:hover { translate: 0 -3px; box-shadow: 0 6px 14px rgba(40, 30, 60, 0.24); }
+  .l4-tile.on:hover { box-shadow: 0 0 0 3px var(--btn-green), 0 6px 14px rgba(40, 30, 60, 0.24); }
+  .l4-sw i { transition: transform 0.1s ease; }
+  .l4-sw:hover i { transform: scale(1.14); }
+  .l4-reset:hover { background: #e3dbcb; }
+  .l4-submit:hover,
+  .l4-jfoot .btn:hover { filter: brightness(1.08); }
+}
+
 /* small phones (iPhone SE landscape): tighten type */
 @media (max-width: 700px) {
   .l4-theme-t { font-size: 17px; }

@@ -96,7 +96,10 @@ const factory: MiniGameFactory = () => {
   let gridEl: HTMLElement;
   let swatchEl: HTMLElement;
   let footLabel: HTMLElement;
+  let panelEl: HTMLElement;
   let judgeEl: HTMLElement | null = null;
+  /** Mouse players read "Click", phones keep "Tap". */
+  const TAP = typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches ? 'Click' : 'Tap';
 
   const theme = () => THEMES[round];
 
@@ -129,15 +132,17 @@ const factory: MiniGameFactory = () => {
     tabsEl = el('div', { class: 'l4-tabs', role: 'tablist' });
     for (const c of CATEGORIES) {
       const b = el('button', { class: 'l4-tab', role: 'tab', 'data-testid': `l4-tab-${c.id}`, 'aria-label': c.label, html: TAB_ICONS[c.id] }, el('span', {}, c.label));
-      b.addEventListener('click', () => {
-        if (tab === c.id) return;
-        host.audio.sfx('tap');
-        tab = c.id;
-        gridEl.scrollTop = 0;
-        refreshPanel();
-      });
+      b.addEventListener('click', () => selectTab(c.id));
       tabsEl.appendChild(b);
     }
+    // Left/Right arrows move between tabs (keyboard players)
+    tabsEl.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const i = CATEGORIES.findIndex((c) => c.id === tab);
+      const n = CATEGORIES[(i + (e.key === 'ArrowRight' ? 1 : CATEGORIES.length - 1)) % CATEGORIES.length].id;
+      selectTab(n);
+      (tabsEl.querySelector(`[data-testid="l4-tab-${n}"]`) as HTMLElement | null)?.focus();
+    });
     gridEl = el('div', { class: 'l4-grid scrollable', 'data-testid': 'l4-grid' });
     swatchEl = el('div', { class: 'l4-swatches', 'data-testid': 'l4-swatches' });
     footLabel = el('div', { class: 'l4-foot-label' });
@@ -157,7 +162,7 @@ const factory: MiniGameFactory = () => {
     });
     const submit = button('Show Jocelyn', () => submit_('button'), { color: 'green', icon: '✓', id: 'l4-submit' });
     submit.classList.add('l4-submit');
-    const panel = el(
+    const panel = (panelEl = el(
       'div',
       { class: 'l4-panel paper' },
       el('div', { class: 'tape l4-tape-l' }),
@@ -165,15 +170,20 @@ const factory: MiniGameFactory = () => {
       tabsEl,
       gridEl,
       el('div', { class: 'l4-foot' }, swatchEl, footLabel, reset, submit),
-    );
+    ));
 
     root = el('div', { class: 'l4', 'data-testid': 'l4-root' }, themeEl, stage, panel);
+    // Core input cancels Space at the window, which would stop Space pressing a focused button.
+    root.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && (e.target as HTMLElement).closest('button')) e.stopPropagation();
+    });
     host.dom.appendChild(root);
     fitScale();
     offResize = host.stage.onResize(fitScale);
   }
 
   let offResize: (() => void) | null = null;
+  let pausedFocus: string | null = null;
   function fitScale() {
     const { width, height } = host.dom.getBoundingClientRect();
     const k = height > SCALE_ABOVE_H ? height / LAYOUT_H : 1;
@@ -202,7 +212,26 @@ const factory: MiniGameFactory = () => {
     return w.length ? w[w.length - 1].id : null;
   }
 
+  function selectTab(c: Category) {
+    if (tab === c || phase !== 'dress') return;
+    host.audio.sfx('tap');
+    tab = c;
+    gridEl.scrollTop = 0;
+    refreshPanel();
+  }
+
+  /** testid of the focused control if it's one of ours (so a rebuild can hand focus back). */
+  function focusedTestId(): string | null {
+    const a = document.activeElement as HTMLElement | null;
+    return a && root.contains(a) ? (a.dataset.testid ?? null) : null;
+  }
+
+  function refocus(testid: string | null) {
+    if (testid) (root.querySelector(`[data-testid="${testid}"]`) as HTMLElement | null)?.focus({ preventScroll: true });
+  }
+
   function refreshPanel() {
+    const had = focusedTestId();
     for (const b of tabsEl.children) {
       const id = (b as HTMLElement).dataset.testid!.replace('l4-tab-', '') as Category;
       b.classList.toggle('on', id === tab);
@@ -248,11 +277,12 @@ const factory: MiniGameFactory = () => {
         : []),
     );
     let hint = tab === 'extra' ? 'One of each kind' : 'to try it on';
-    if (focused) hint = !w ? 'Tap to try it on' : focused.cat !== 'hair' ? 'Tap again to take off' : many ? 'Pick a color' : 'Or try another style';
+    if (focused) hint = !w ? `${TAP} to try it on` : focused.cat !== 'hair' ? `${TAP} again to take off` : many ? 'Pick a color' : 'Or try another style';
     footLabel.replaceChildren(
-      el('b', {}, focused ? `${focused.name}${many ? ` · ${focused.variants[cur].name}` : ''}` : tab === 'extra' ? 'Mix and match' : 'Tap a piece'),
+      el('b', {}, focused ? `${focused.name}${many ? ` · ${focused.variants[cur].name}` : ''}` : tab === 'extra' ? 'Mix and match' : `${TAP} a piece`),
       el('small', {}, hint),
     );
+    refocus(had);
   }
 
   function refreshAll() {
@@ -328,11 +358,14 @@ const factory: MiniGameFactory = () => {
     for (const k of Object.keys(lastVariant)) delete lastVariant[k];
     tab = 'top';
     gridEl.scrollTop = 0;
+    const fromVerdict = focusedTestId() === 'l4-next';
+    panelEl.inert = false;
     judgeEl?.remove();
     judgeEl = null;
     reveal = null;
     refreshTheme();
     refreshAll();
+    if (fromVerdict) refocus('l4-tab-top');
     host.hud.setTimer(timeLeft, 10);
     host.banner(`Round ${i + 1}!`);
   }
@@ -400,6 +433,9 @@ const factory: MiniGameFactory = () => {
     judgeEl = el('div', { class: 'l4-judge' }, card);
     root.appendChild(judgeEl);
     host.hud.setTimer(null);
+    // the wardrobe sits behind the card: keep keyboard focus out of it
+    const hadFocus = focusedTestId() !== null;
+    panelEl.inert = true;
 
     // reveal: stars one by one, then her comment and the scorecard (see update)
     reveal = {
@@ -412,6 +448,7 @@ const factory: MiniGameFactory = () => {
         checks.classList.add('in');
         verdict?.classList.add('in');
         next.style.visibility = '';
+        if (hadFocus) next.focus({ preventScroll: true });
         host.audio.sfx(end && won ? 'cheer' : v.stars === 5 ? 'perfect' : v.stars <= 2 ? 'miss' : 'pop');
         if (v.stars === 5) confetti(card);
         if (host.audio.hasVoice('jocelyn', v.comment)) void host.audio.speak(v.comment, { who: 'jocelyn' });
@@ -578,6 +615,14 @@ const factory: MiniGameFactory = () => {
 
     render(ctx) {
       background(ctx);
+    },
+
+    onPause(paused) {
+      // nothing behind the pause menu may take clicks or keyboard focus
+      if (!root) return;
+      if (paused) pausedFocus = focusedTestId();
+      root.inert = paused;
+      if (!paused) refocus(pausedFocus);
     },
 
     destroy() {
