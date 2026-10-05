@@ -6,7 +6,7 @@
  */
 import type { GameHost, MiniGame, MiniGameFactory } from '../types';
 import { LINE, MICHAEL, NOAH, WES, drawBallArt, drawBonk, drawCourt, drawCover, drawLiz, drawPerson, newHair, starPath, stepHair, type LizPose, type PersonLook } from './draw';
-import { BALL_R, DodgeSim, ROUNDS, type Arena } from './sim';
+import { BALL_R, DodgeSim, ROUNDS, followAxis, type Arena } from './sim';
 
 const COURT = 'img/bg/l5-court.webp';
 const BALL = 'img/sprites/basketball.png';
@@ -82,6 +82,15 @@ const factory: MiniGameFactory = () => {
   let worry = 0;
   let cheerIdx = 0;
   let bonkAt: { x: number; y: number } | null = null;
+  /**
+   * Touch steers with a floating stick (drag anywhere). A mouse or trackpad
+   * steers by pointing: Liz runs to the cursor, no button needed. The last
+   * kind of pointer used decides; keys work with either.
+   */
+  let scheme: 'touch' | 'mouse' = 'touch';
+  /** Cursor in virtual units; `fresh` once it has moved since keys were last used. */
+  const cursor = { x: 0, y: 0, inside: false, fresh: false };
+  let unlisten = () => {};
   const pops: Pop[] = [];
   const bits: Bit[] = [];
   const bubbles: Bubble[] = [];
@@ -107,10 +116,67 @@ const factory: MiniGameFactory = () => {
   function setupControls() {
     const { W, H } = host.stage;
     host.input.clearControls();
+    if (scheme === 'mouse') return;
     // Full speed takes the same thumb travel on any screen (about 8 mm), so
     // the stick radius is set in CSS px: ~44 units on a phone, ~24 on an iPad.
     const r = Math.max(22, Math.min(46, STICK_PX / host.stage.scale));
     host.input.addStick({ id: 'move', zone: { x: 0, y: 0, w: W, h: H }, r });
+  }
+
+  function setScheme(next: 'touch' | 'mouse') {
+    if (next === scheme) return;
+    scheme = next;
+    cursor.fresh = false;
+    host.stage.canvas.style.cursor = next === 'mouse' ? 'crosshair' : '';
+    setupControls();
+  }
+
+  function listen() {
+    const c = host.stage.canvas;
+    const track = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') return;
+      setScheme('mouse');
+      const v = host.stage.toVirtual(e.clientX, e.clientY);
+      cursor.x = v.x;
+      cursor.y = v.y;
+      cursor.inside = true;
+      cursor.fresh = true;
+    };
+    // capture: runs before Input sees the press, so a finger finds the stick
+    // already there and a mouse click never grabs it
+    const down = (e: PointerEvent) => (e.pointerType === 'mouse' ? track(e) : setScheme('touch'));
+    // off the canvas (onto the HUD, the pause card, another window): stop
+    const leave = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse') cursor.inside = false;
+    };
+    const blur = () => (cursor.inside = false);
+    c.addEventListener('pointerdown', down, { capture: true });
+    c.addEventListener('pointermove', track);
+    c.addEventListener('pointerleave', leave);
+    window.addEventListener('blur', blur);
+    unlisten = () => {
+      c.removeEventListener('pointerdown', down, { capture: true });
+      c.removeEventListener('pointermove', track);
+      c.removeEventListener('pointerleave', leave);
+      window.removeEventListener('blur', blur);
+      c.style.cursor = '';
+    };
+  }
+
+  /** Movement input this frame: keys or the stick, else the mouse cursor. */
+  function steer(): { x: number; y: number } {
+    const a = host.input.axis();
+    if (scheme !== 'mouse') return a;
+    // keys take over, and Liz won't run back to a cursor that hasn't moved since
+    if (a.x || a.y) {
+      cursor.fresh = false;
+      return a;
+    }
+    if (!cursor.inside || !cursor.fresh || hitAt >= 0) return a;
+    const r = arena().liz;
+    const tx = Math.min(r.x1, Math.max(r.x0, cursor.x));
+    const ty = Math.min(r.y1, Math.max(r.y0, cursor.y));
+    return followAxis(sim.liz.x, sim.liz.y, tx, ty);
   }
 
   function spectators(): Array<[PersonLook, number, number]> {
@@ -244,7 +310,7 @@ const factory: MiniGameFactory = () => {
       const h = realT - hitAt;
       timeScale = h < 0.5 ? 0.07 : Math.min(0.5, 0.07 + (h - 0.5) * 0.6);
     }
-    const a = host.input.axis();
+    const a = steer();
     const sdt = dt * timeScale;
     sim.step(sdt, a.x, a.y, host.speed);
     for (const e of sim.events) onEvent(e);
@@ -434,9 +500,17 @@ const factory: MiniGameFactory = () => {
       sim = new DodgeSim(arena(), (Date.now() ^ (Math.random() * 1e9)) >>> 0);
       pose = { x: sim.liz.x, y: sim.liz.y, face: Math.PI / 2, walk: 0, moving: 0, hair: newHair(sim.liz.x, sim.liz.y), hitT: -1, time: 0 };
       setupControls();
+      listen();
       unsubResize = h.stage.onResize(() => {
         court = null;
         sim.setArena(arena());
+        // the frame can settle after the level starts: keep Liz centred until she moves
+        if (sim.round === 1 && sim.phase === 'breather' && movedFor === 0) {
+          const a = arena().liz;
+          sim.liz.x = pose.x = (a.x0 + a.x1) / 2;
+          sim.liz.y = pose.y = (a.y0 + a.y1) / 2;
+          pose.hair = newHair(pose.x, pose.y);
+        }
         setupControls();
       });
       // the round-1 breather event was raised in the constructor
@@ -536,7 +610,7 @@ const factory: MiniGameFactory = () => {
         ctx.font = "19px 'Patrick Hand', sans-serif";
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const text = 'Drag anywhere to move Liz. Dodge every ball!';
+        const text = scheme === 'mouse' ? 'Point with the mouse and Liz runs there. Dodge every ball!' : 'Drag anywhere to move Liz. Dodge every ball!';
         const w = ctx.measureText(text).width + 30;
         const y = H - host.stage.safe.bottom - 34;
         ctx.fillStyle = 'rgba(43, 43, 58, 0.78)';
@@ -553,6 +627,7 @@ const factory: MiniGameFactory = () => {
 
     destroy() {
       unsubResize();
+      unlisten();
       court = null;
     },
 
@@ -565,7 +640,7 @@ const factory: MiniGameFactory = () => {
           liz: { x: sim.liz.x, y: sim.liz.y },
           balls: sim.balls
             .filter((b) => !b.done)
-            .map((b) => ({ x: b.x, y: b.y, vx: b.vx, vy: b.vy, sx: b.sx, sy: b.sy, flying: b.flying, warn: b.warn, kind: b.kind, spent: b.spent })),
+            .map((b) => ({ x: b.x, y: b.y, vx: b.vx, vy: b.vy, sx: b.sx, sy: b.sy, flying: b.flying, warn: b.warn, warnTotal: b.warnTotal, kind: b.kind, spent: b.spent })),
           god: sim.god,
           timeScale,
           W: host.stage.W,
@@ -573,6 +648,8 @@ const factory: MiniGameFactory = () => {
           stickR: Math.max(22, Math.min(46, STICK_PX / host.stage.scale)),
           /** game seconds (pauses and the 0.05 s dt clamp included) */
           t: realT,
+          scheme,
+          cursor: { ...cursor },
         }),
         /** Balls pass through Liz. */
         god: (on = true) => {

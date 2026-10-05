@@ -30,6 +30,22 @@ export const PAIR_GAP = 96;
 /** Spacing of the three balls in a 'wall' (too tight to slip between). */
 export const WALL_GAP = 36;
 
+/**
+ * Mouse steering: Liz heads for the cursor at full speed, easing off over the
+ * last FOLLOW_RAMP units so she settles on it instead of jittering.
+ */
+export const FOLLOW_DEAD = 4;
+export const FOLLOW_RAMP = 22;
+
+export function followAxis(lx: number, ly: number, tx: number, ty: number): { x: number; y: number } {
+  const dx = tx - lx;
+  const dy = ty - ly;
+  const d = Math.hypot(dx, dy);
+  if (d <= FOLLOW_DEAD) return { x: 0, y: 0 };
+  const k = Math.min(1, (d - FOLLOW_DEAD) / FOLLOW_RAMP) / d;
+  return { x: dx * k, y: dy * k };
+}
+
 export const ballCount = (r: number) => 3 + r;
 export const roundSpeed = (r: number) => 160 + 32 * r;
 /** Warning before a ball flies: 0.8 s in round 1 down to 0.6 s in round 10. */

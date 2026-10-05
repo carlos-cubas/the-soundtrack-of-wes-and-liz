@@ -5,10 +5,12 @@ import {
   CONTACT,
   THROW_KINDS,
   DodgeSim,
+  FOLLOW_DEAD,
   ROUNDS,
   SPAWN_WINDOW,
   ballCount,
   ballsIn,
+  followAxis,
   planRound,
   rng,
   roundMix,
@@ -174,7 +176,7 @@ function distToPath(b: Ball, x: number, y: number) {
  * every 0.12 s, misjudges each ball's angle a little, steers imprecisely and
  * moves at most at `speedFrac` of top speed.
  */
-function playBot(seed: number, react = 0.3, speedFrac = 0.75, aimErr = 0.05, steerErr = 0.25, attention = 3): number {
+function playBot(seed: number, react = 0.3, speedFrac = 0.75, aimErr = 0.05, steerErr = 0.25, attention = 3, control: 'stick' | 'mouse' = 'stick'): number {
   const sim = new DodgeSim(ARENA, seed);
   const noise = rng(seed * 7 + 1);
   const gauss = () => (noise() + noise() + noise() - 1.5) * 1.15;
@@ -185,6 +187,7 @@ function playBot(seed: number, react = 0.3, speedFrac = 0.75, aimErr = 0.05, ste
   }
   const misjudge = new Map<Ball, number>();
   let move: [number, number] = [0, 0];
+  let cursor: [number, number] = [ARENA.liz.x0 + 300, ARENA.liz.y0 + 150];
   let think = 0;
   const cx = (ARENA.liz.x0 + ARENA.liz.x1) / 2;
   const cy = (ARENA.liz.y0 + ARENA.liz.y1) / 2;
@@ -227,10 +230,21 @@ function playBot(seed: number, react = 0.3, speedFrac = 0.75, aimErr = 0.05, ste
           pick = [mx, my];
         }
       }
-      // fat thumbs: the stick never points quite where you meant
-      const e = gauss() * steerErr;
-      const k = speedFrac * (0.85 + noise() * 0.15);
-      move = [(pick[0] * Math.cos(e) - pick[1] * Math.sin(e)) * k, (pick[0] * Math.sin(e) + pick[1] * Math.cos(e)) * k];
+      if (control === 'stick') {
+        // fat thumbs: the stick never points quite where you meant
+        const e = gauss() * steerErr;
+        const k = speedFrac * (0.85 + noise() * 0.15);
+        move = [(pick[0] * Math.cos(e) - pick[1] * Math.sin(e)) * k, (pick[0] * Math.sin(e) + pick[1] * Math.cos(e)) * k];
+      } else {
+        // a mouse player puts the cursor on a safe spot ahead (a little off)
+        // and Liz runs to it; standing still means leaving the cursor on her
+        const reach = (pick[0] || pick[1] ? 70 : 0) * (0.8 + noise() * 0.4);
+        cursor = [sim.liz.x + pick[0] * reach + gauss() * 8, sim.liz.y + pick[1] * reach + gauss() * 8];
+      }
+    }
+    if (control === 'mouse') {
+      const a = followAxis(sim.liz.x, sim.liz.y, cursor[0], cursor[1]);
+      move = [a.x, a.y];
     }
     sim.step(DT, move[0], move[1]);
     if (sim.phase === 'hit') return sim.round;
@@ -274,6 +288,49 @@ describe('L5 difficulty (bot playtest)', () => {
       if (sim.phase === 'done') wins++;
     }
     expect(wins).toBe(0);
+  });
+});
+
+describe('L5 mouse steering', () => {
+  it('heads for the cursor at full speed and settles on it', () => {
+    const far = followAxis(100, 100, 400, 100);
+    expect(far.x).toBeCloseTo(1, 5);
+    expect(far.y).toBeCloseTo(0, 5);
+    expect(followAxis(100, 100, 100 + FOLLOW_DEAD - 0.5, 100)).toEqual({ x: 0, y: 0 });
+    const near = followAxis(100, 100, 112, 100);
+    expect(near.x).toBeGreaterThan(0);
+    expect(near.x).toBeLessThan(1);
+    // following a still cursor arrives without overshooting
+    const sim = new DodgeSim(ARENA, 3);
+    const tx = sim.liz.x + 150;
+    const ty = sim.liz.y - 60;
+    let maxPast = 0;
+    for (let i = 0; i < 90; i++) {
+      const a = followAxis(sim.liz.x, sim.liz.y, tx, ty);
+      sim.step(DT, a.x, a.y);
+      maxPast = Math.max(maxPast, sim.liz.x - tx);
+    }
+    expect(Math.hypot(sim.liz.x - tx, sim.liz.y - ty)).toBeLessThan(FOLLOW_DEAD + 0.5);
+    expect(maxPast).toBeLessThan(1);
+  });
+
+  it('a casual mouse player does about as well as a casual touch player', { timeout: 60000 }, () => {
+    const N = 120;
+    const clear = (control: 'stick' | 'mouse') => {
+      let wins = 0;
+      let early = 0;
+      for (let s = 1; s <= N; s++) {
+        const r = playBot(3000 + s, 0.3, 0.75, 0.05, 0.25, 3, control);
+        if (r > ROUNDS) wins++;
+        if (r > 6) early++;
+      }
+      return { wins: wins / N, early: early / N };
+    };
+    const touch = clear('stick');
+    const mouse = clear('mouse');
+    console.log(`clear all ten: touch ${(touch.wins * 100).toFixed(0)}%, mouse ${(mouse.wins * 100).toFixed(0)}%; past round 6: touch ${(touch.early * 100).toFixed(0)}%, mouse ${(mouse.early * 100).toFixed(0)}%`);
+    expect(mouse.early).toBeGreaterThanOrEqual(0.95);
+    expect(Math.abs(mouse.wins - touch.wins)).toBeLessThan(0.2);
   });
 });
 
