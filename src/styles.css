@@ -413,3 +413,11 @@ button {
 .howto-key { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 .howto-key > span { margin-left: 4px; }
 kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 26px; padding: 0 6px; font: inherit; font-size: 17px; line-height: 1; color: var(--ink); background: var(--paper); border: 1.5px solid var(--ink); border-radius: 5px; box-shadow: 0 2.5px 0 var(--ink); }
+
+/* ---------- In-game HUD buttons on desktop: same hover and focus ring as the menus ---------- */
+@media (hover: hover) {
+  .hud .icon-btn, .item-use { transition: translate 0.12s ease, filter 0.12s ease; }
+  .hud .icon-btn:hover, .item-use:hover { translate: 0 -2px; filter: brightness(1.06); }
+}
+.hud .icon-btn:focus-visible, .item-use:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+.hud .icon-btn:focus:not(:focus-visible), .item-use:focus:not(:focus-visible) { outline: none; }

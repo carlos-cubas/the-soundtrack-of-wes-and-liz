@@ -1317,3 +1317,58 @@ html.ui-big #app > .toast { scale: var(--ui-scale); transform-origin: 0 0; }
 .howto-chip .chip-ico .ico-svg { width: 22px; height: 22px; }
 .howto-portrait.frog > img { object-fit: contain; object-position: center bottom; }
 .result-portrait.frog { height: 46%; align-self: center; }
+
+/* ---------- Desktop: hover and keyboard focus ----------
+   Scoped to the meta screens and every modal (incl. the pause menu), never
+   the games' own DOM. Hover only where a real pointer hovers, so touch
+   phones and iPads are unchanged. `translate` / `scale` compose with any
+   transform an element already has (tilted cards, bouncing pins). */
+:root { --focus: var(--ink); }
+.dialogue-screen, .ending-screen, .result-screen { --focus: var(--lemon); }
+.modal { --focus: var(--ink); }
+
+:is(.title-screen, .map-screen, .narration, .dialogue-screen, .result-screen, .reward-screen, .ending-screen, .overlay) :focus:not(:focus-visible) { outline: none; }
+:is(.title-screen, .map-screen, .narration, .dialogue-screen, .result-screen, .reward-screen, .ending-screen, .overlay)
+  :is(.btn, .icon-btn, .close-x, .about-tab, .switch, button):focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+/* pins: the ring hugs the round dot */
+.map-screen .map-pin:focus-visible { outline: none; }
+.map-screen .map-pin:focus-visible .pin-dot { box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--ink), 0 4px 10px rgba(0, 0, 0, 0.35); }
+/* the switch's visible track is inset in its 44px box */
+.switch:focus-visible { outline-offset: -1px; border-radius: 22px; }
+/* the credits link */
+.credit .btn.end-about:focus-visible { outline-offset: 0; border-radius: 8px; }
+
+.narr-card:not(.typed), .inv-card.none { cursor: pointer; }
+
+@media (hover: hover) {
+  :is(.title-screen, .map-screen, .narration, .dialogue-screen, .result-screen, .reward-screen, .ending-screen, .overlay) :is(.btn, .icon-btn, .close-x) {
+    transition: transform 0.08s ease, filter 0.15s ease, translate 0.12s ease, scale 0.12s ease, background-color 0.15s;
+  }
+  .pin-dot, .inv-card, .set-row { transition: scale 0.12s ease, translate 0.12s ease, box-shadow 0.15s, background-color 0.15s; }
+  :is(.title-screen, .map-screen, .narration, .dialogue-screen, .result-screen, .reward-screen, .ending-screen, .overlay) .btn:hover:not(:active) {
+    translate: 0 -2px;
+    filter: brightness(1.08) saturate(1.05);
+  }
+  :is(.title-screen, .map-screen, .narration, .dialogue-screen, .result-screen, .reward-screen, .ending-screen, .overlay) .btn:hover:not(:active)[disabled] { translate: none; }
+  :is(.title-screen, .map-screen, .overlay) :is(.icon-btn, .close-x):hover { scale: 1.07; background: #fff; }
+  .credit .btn.end-about:hover:not(:active) { translate: none; filter: none; text-decoration-thickness: 2px; color: var(--sky-ink); }
+  .btn.title-about:hover { --c: #fff; }
+
+  .map-pin:not(.locked):hover .pin-dot { scale: 1.12; }
+  .map-pin.locked:hover .pin-dot { scale: 1.05; }
+  .map-pin:hover .pin-label { background: #fffbe0; }
+  .map-pin.next:hover .pin-label { background: #ff8aa0; }
+
+  .set-row:hover { background: #fff; box-shadow: 0 5px 12px rgba(10, 30, 60, 0.25); }
+  .set-row:hover .switch::before { filter: brightness(1.06); }
+  .about-tab:hover { background: #fff; }
+
+  .playlist-row:not(.locked):hover { background: rgba(255, 232, 15, 0.2); }
+  .inv-card:hover { translate: 0 -3px; box-shadow: 0 10px 22px var(--paper-shadow); }
+  .inv-card.equipped:hover { box-shadow: 0 0 0 4px var(--btn-green), 0 0 18px rgba(34, 197, 94, 0.55), 0 10px 22px var(--paper-shadow); }
+  .loc-row:not(.locked):hover { box-shadow: 0 6px 14px rgba(10, 30, 60, 0.3); }
+  .narr-card:not(.typed):hover { box-shadow: 0 8px 22px var(--paper-shadow); }
+}
