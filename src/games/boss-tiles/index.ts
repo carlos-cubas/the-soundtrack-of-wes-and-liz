@@ -31,6 +31,9 @@ import {
   card as drawCard,
   inked,
   buildTileSprite,
+  keycapRect,
+  laneForKey,
+  LANE_KEYS,
   heartPath,
   laneAt,
   laneCenter,
@@ -47,7 +50,6 @@ const TAP_LAG = 0.03;
 const REWIND = 2 * BEAT;
 /** Seconds a tile is on screen before it reaches the hit line. */
 const LEAD = (HIT_Y + TILE_H) / SPEED;
-const KEYS = ['KeyD', 'KeyF', 'KeyJ', 'KeyK'];
 const BG = 'img/bg/boss-night.webp';
 const WES = 'img/sprites/wes.png';
 const LIZ = 'img/sprites/liz.png';
@@ -132,6 +134,12 @@ export default (level: LevelDef): MiniGame => {
   let nextDrop = 0;
   let chokeAt = 0;
   let lastTap = { x: -1, lane: -1 };
+  /**
+   * Show the lane keys? On devices that look like they have a keyboard
+   * (a fine pointer that hovers), and from the first lane key pressed, so
+   * an iPad with a keyboard gets them too. Touch-only phones never do.
+   */
+  let keyboard = typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches;
 
   // autoplay (debug): taps every tile on time through real pointer events
   let auto = false;
@@ -461,17 +469,25 @@ export default (level: LevelDef): MiniGame => {
     if (lane >= 0) down(lane, e.pointerId, stamp(e), v.x, v.y);
   };
   const onPointerUp = (e: PointerEvent) => up(e.pointerId, stamp(e));
+  // A held key is a finger on its lane (id -1 - lane) until keyup, so holds work.
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.repeat) return;
     if (phase === 'card' && !paused && (e.code === 'Space' || e.code === 'Enter')) {
       void startSong();
       return;
     }
-    const lane = KEYS.indexOf(e.code);
-    if (lane >= 0) down(lane, -1 - lane, stamp(e), laneCenter(L, lane), HIT_Y);
+    const lane = laneForKey(e.code);
+    if (lane < 0) return;
+    if (!keyboard) {
+      keyboard = true;
+      if (card) card.querySelector('.row')?.before(keysHint());
+    }
+    // an OS that forgets to flag a repeat must not tap the lane again
+    if (pointerLane.has(-1 - lane)) return;
+    down(lane, -1 - lane, stamp(e), laneCenter(L, lane), HIT_Y);
   };
   const onKeyUp = (e: KeyboardEvent) => {
-    const lane = KEYS.indexOf(e.code);
+    const lane = laneForKey(e.code);
     if (lane >= 0) up(-1 - lane, stamp(e));
   };
 
@@ -526,10 +542,34 @@ export default (level: LevelDef): MiniGame => {
           { style: `color:${trust > 0 ? '#c2410c' : '#64748b'};font-size:17px` },
           `Libby's trust: +${trust}% from side quests` + (sideQuests < 3 ? ` (${sideQuests}/3 done)` : ''),
         ),
+        keyboard ? keysHint() : null,
         el('div', { class: 'row' }, button('Start', () => void startSong(), { color: 'green', icon: '▶', id: 'boss-start' })),
       ),
     );
     host.dom.appendChild(card);
+  }
+
+  /** "On a keyboard, press D F J K…" with line-art keycaps, for the intro card. */
+  function keysHint(): HTMLElement {
+    const cap = (k: string) =>
+      el(
+        'kbd',
+        {
+          style:
+            'display:inline-block;min-width:1.5em;margin:0 1px;padding:0 4px;border:1.5px solid var(--ink);border-bottom-width:3px;' +
+            'border-radius:6px;background:var(--paper);font:inherit;line-height:1.25;text-align:center',
+        },
+        k,
+      );
+    return el(
+      'p',
+      { 'data-testid': 'boss-keys-hint', style: 'font-size:17px' },
+      'On a keyboard, press ',
+      ...LANE_KEYS.map((k) => cap(k.slice(3))),
+      ' for the four lanes. Hold the key for long tiles. ',
+      cap('Space'),
+      ' starts.',
+    );
   }
 
   // ------------------------------------------------------------- drawing
@@ -616,6 +656,27 @@ export default (level: LevelDef): MiniGame => {
         ctx.fillRect(L.x0 + i * L.laneW + 1, HIT_Y - TILE_H / 2, L.laneW - 2, TILE_H);
         ctx.globalAlpha = 1;
       }
+    }
+  }
+
+  /** Line-art keycaps under the hit line; a held key presses down and turns lemon. */
+  function drawKeycaps(ctx: CanvasRenderingContext2D): void {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = "15px 'Patrick Hand'";
+    for (let lane = 0; lane < 4; lane++) {
+      const r = keycapRect(L, lane);
+      const held = pointerLane.has(-1 - lane);
+      const dy = held ? 2 : 0;
+      if (!held) {
+        roundRect(ctx, r.x, r.y + 2.5, r.w, r.h, 6);
+        ctx.fillStyle = 'rgba(58,51,64,0.45)';
+        ctx.fill();
+      }
+      roundRect(ctx, r.x, r.y + dy, r.w, r.h, 6);
+      inked(ctx, held ? LEMON : CREAM, 1.5);
+      ctx.fillStyle = INK_TEXT;
+      ctx.fillText(LANE_KEYS[lane].slice(3), r.x + r.w / 2, r.y + dy + r.h / 2 + 1);
     }
   }
 
@@ -1046,6 +1107,7 @@ export default (level: LevelDef): MiniGame => {
       ctx.drawImage(staticLayer!, 0, 0, W, H);
       const p = pos;
       drawLanesFx(ctx, p);
+      if (keyboard) drawKeycaps(ctx);
       drawCenterText(ctx, p);
       drawTiles(ctx, p);
       drawFx(ctx);
@@ -1133,6 +1195,7 @@ export default (level: LevelDef): MiniGame => {
               heartLabel: heartLabel?.style.display !== 'none',
             },
             lastTap,
+            keyboard,
             /** Lane centres and the hit line in client pixels, for test scripts. */
             touch: (() => {
               const r = host.stage.canvas.getBoundingClientRect();

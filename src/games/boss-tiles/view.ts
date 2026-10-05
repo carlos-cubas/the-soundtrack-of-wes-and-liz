@@ -61,6 +61,16 @@ export function layout(stage: Stage): Layout {
 
 export const laneCenter = (L: Layout, lane: number) => L.x0 + (lane + 0.5) * L.laneW;
 
+/** Keyboard lanes, left to right (home-row keys under both hands). */
+export const LANE_KEYS = ['KeyD', 'KeyF', 'KeyJ', 'KeyK'];
+export const laneForKey = (code: string) => LANE_KEYS.indexOf(code);
+
+/** Where a lane's keycap sits: centred in the lane, in the strip under the hit band. */
+export function keycapRect(L: Layout, lane: number): { x: number; y: number; w: number; h: number } {
+  const w = Math.min(30, Math.round(L.laneW * 0.36));
+  return { x: laneCenter(L, lane) - w / 2, y: HIT_Y + TILE_H / 2 + 6, w, h: 22 };
+}
+
 /**
  * Lane under a virtual x: exactly the drawn columns, plus the gap to each
  * side column (so a thumb slightly off the edge still counts); -1 over a column.

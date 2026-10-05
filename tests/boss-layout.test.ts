@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Stage } from '../src/core/stage';
 import { STEP } from '../src/games/boss-tiles/chart';
-import { HIT_Y, LANE_MAX, SPEED, TILE_H, laneAt, laneCenter, layout } from '../src/games/boss-tiles/view';
+import { HIT_Y, LANE_KEYS, LANE_MAX, SPEED, TILE_H, keycapRect, laneAt, laneCenter, laneForKey, layout } from '../src/games/boss-tiles/view';
 
 /** A stage as the game sees it: virtual height 400, width from the phone's aspect, insets in virtual units. */
 function stage(cssW: number, cssH: number, insetPt = 0): Stage {
@@ -15,6 +15,8 @@ const PHONES = {
   'iPhone Pro (844x390, 59pt insets)': stage(844, 390, 59),
   'iPhone SE (667x375, no insets)': stage(667, 375, 0),
   'desktop 844x390, no insets': stage(844, 390, 0),
+  'desktop 1440x900 (framed 1440x810)': stage(1440, 810, 0),
+  'desktop 1280x720': stage(1280, 720, 0),
 };
 
 describe('boss layout', () => {
@@ -50,6 +52,25 @@ describe('boss layout', () => {
       expect(laneAt(L, L.x1 + 6)).toBe(3);
       expect(laneAt(L, L.lx + L.lw / 2)).toBe(-1);
       expect(laneAt(L, L.kx + L.kw / 2)).toBe(-1);
+    });
+  }
+
+  it('maps D F J K to the four lanes, left to right, and nothing else', () => {
+    expect(['KeyD', 'KeyF', 'KeyJ', 'KeyK'].map(laneForKey)).toEqual([0, 1, 2, 3]);
+    for (const code of ['KeyA', 'Space', 'ArrowLeft', 'Enter', 'KeyS']) expect(laneForKey(code)).toBe(-1);
+    expect(LANE_KEYS.map((k) => k.slice(3))).toEqual(['D', 'F', 'J', 'K']);
+  });
+
+  for (const [name, s] of Object.entries(PHONES)) {
+    it(`${name}: each keycap sits in its own lane, under the hit band, on screen`, () => {
+      const L = layout(s);
+      for (let lane = 0; lane < 4; lane++) {
+        const r = keycapRect(L, lane);
+        expect(laneAt(L, r.x)).toBe(lane);
+        expect(laneAt(L, r.x + r.w)).toBe(lane);
+        expect(r.y).toBeGreaterThanOrEqual(HIT_Y + TILE_H / 2); // never covers the hit slot
+        expect(r.y + r.h + 3).toBeLessThanOrEqual(400); // shadow included
+      }
     });
   }
 
